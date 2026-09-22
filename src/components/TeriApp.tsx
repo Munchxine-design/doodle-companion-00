@@ -59,7 +59,7 @@ function Header({ page, setPage }: { page: Page; setPage: (page: Page) => void }
   return (
     <>
       <header className="site-header">
-        <button className="brand" onClick={() => setPage("inicio")} aria-label="Ir a inicio"><Orbit /> Teri Dayo!</button>
+        <button className="brand" onClick={() => setPage("inicio")} aria-label="Ir a inicio"><Orbit /> Munchxine!</button>
         <Button variant="ghost" size="icon" className="mobile-menu" onClick={() => setOpen(!open)} aria-label="Abrir menú"><Menu /></Button>
         <nav className={open ? "nav-list is-open" : "nav-list"} aria-label="Navegación principal">
           {nav.map((item) => (
@@ -68,7 +68,7 @@ function Header({ page, setPage }: { page: Page; setPage: (page: Page) => void }
           <button onClick={() => setAdminOpen(true)} aria-label="Administración"><LockKeyhole size={14} /> Admin</button>
         </nav>
       </header>
-      <div className="breadcrumb"><Orbit size={12} /><span>Teri Dayo!</span><span>/</span><span>{page === "inicio" ? "Estudio creativo" : nav.find((item) => item.id === page)?.label}</span><Sparkles size={11} /></div>
+      <div className="breadcrumb"><Orbit size={12} /><span>Munchxine!</span><span>/</span><span>{page === "inicio" ? "Estudio creativo" : nav.find((item) => item.id === page)?.label}</span><Sparkles size={11} /></div>
       <Dialog open={adminOpen} onOpenChange={setAdminOpen}>
         <DialogContent className="station-dialog">
           <DialogHeader><DialogTitle>admin_login.exe</DialogTitle><DialogDescription>Zona restringida de TeriDayo.</DialogDescription></DialogHeader>
@@ -102,9 +102,9 @@ function TabletExperience({ setPage }: { setPage: (page: Page) => void }) {
     <div className="tablet-scroll" ref={sectionRef}>
       <div className="tablet-sticky">
         <div className="hero-grid">
-          <Window title="FILE_VIEWER: TERIDAYO.EXE" className="hero-window">
+          <Window title="FILE_VIEWER: MUNCHXINE.EXE" className="hero-window">
             <div className="hero-copy">
-              <div className="hero-logo">TERI<br /><em>_DAYO!</em></div>
+              <div className="hero-logo">Munchxine<br /><em>Safeplace!</em></div>
               <span className="welcome-chip">Welcome to my freaky portfolio page :3</span>
               <p className="eyebrow">DIGITAL ART · PERSONAL UNIVERSE</p>
               <h1>Your idea, your model, brought out of the drawing :3</h1>
@@ -144,14 +144,14 @@ function AvatarBlueprint({ mode }: { mode: "sketch" | "line" }) {
 function ProfileBand() {
   return (
     <section className="profile-band">
-      <Window title="TeriDayo_profile.exe"><div className="profile-content"><img src={avatarAsset.url} alt="Avatar pixel art de TeriDayo" /><div><p className="eyebrow">HAII!!.TXT</p><h2>TeriDayo / Anthony / Matt</h2><p>Artista mexicano de 20 años • Arte 2D y 3D • ESP / ENG</p><div className="tags"><span>Roblox</span><span>ARGs</span><span>Minecraft</span></div></div></div></Window>
+      <Window title="Munchxine_profile.exe"><div className="profile-content"><img src={avatarAsset.url} alt="Avatar pixel art de TeriDayo" /><div><p className="eyebrow">HIYAAA!!</p><h2>TeriDayo / Anthony / Matt</h2><p>Artista mexicano de 20 años • Arte 2D y 3D • ESP / ENG</p><div className="tags"><span>Roblox</span><span>ARGs</span><span>Minecraft</span></div></div></div></Window>
       <Window title="ACCESOS_DIRECTOS"><div className="online-content"><h2>Teri Online!</h2><div className="social-row"><Button variant="station"><X /> Twitter / X</Button><Button variant="station"><Coffee /> Ko-fi</Button></div><div className="online-art"><img src={avatarAsset.url} alt="Teri online" /><span>@TeriDayo_</span></div></div></Window>
     </section>
   );
 }
 
 function Home({ setPage }: { setPage: (page: Page) => void }) {
-  return <><TabletExperience setPage={setPage} /><section className="intro-band"><Window title="Teri.txt"><div className="intro-copy"><img src={avatarAsset.url} alt="Avatar de Teri" /><div><p className="eyebrow">WELCOME_NOTE.LOG</p><h2>¡Haii! Mi nombre es Teri Dayo.</h2><p>Soy un artista digital enfocado en el arte 2D y 3D. Me apasiona modelar aquello que me inspira, para luego darle vida en VRChat.</p></div></div></Window></section><ProfileBand /></>;
+  return <><TabletExperience setPage={setPage} /><section className="intro-band"><Window title="Munchxine.txt"><div className="intro-copy"><img src={avatarAsset.url} alt="Avatar de Teri" /><div><p className="eyebrow">WELCOME_NOTE.LOG</p><h2>¡Haii! Mi nombre es Teri Dayo.</h2><p>Soy un artista digital enfocado en el arte 2D y 3D. Me apasiona modelar aquello que me inspira, para luego darle vida en VRChat.</p></div></div></Window></section><ProfileBand /></>;
 }
 
 function Portfolio() {
