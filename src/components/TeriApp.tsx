@@ -1,10 +1,13 @@
-import { useEffect, useRef, useState, type PointerEvent } from "react";
+import { useEffect, useRef, useState, type PointerEvent, type ChangeEvent } from "react";
 import {
   Brush,
+  Check,
   ChevronDown,
   Coffee,
   Eraser,
+  Eye,
   Folder,
+  ImageIcon,
   LockKeyhole,
   Menu,
   MessageCircle,
@@ -16,6 +19,7 @@ import {
   Send,
   Sparkles,
   Square,
+  Trash2,
   X,
 } from "lucide-react";
 import avatarAsset from "@/assets/teridayo-avatar.png.asset.json";
@@ -24,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
 
 type Page = "inicio" | "portafolio" | "comunidad" | "sobre-mi" | "contacto";
 
@@ -41,6 +46,29 @@ const stages = [
   { title: "3. ¡Ilustración finalizada! 🎨", copy: "Sombras, luces y efectos mágicos listos para exportar." },
 ];
 
+const ADMIN_PASSWORD = "teri123";
+
+const colorPresets = [
+  { name: "Azul", value: "#69a2ff" },
+  { name: "Rosa", value: "#ff6b9d" },
+  { name: "Verde", value: "#4ade80" },
+  { name: "Naranja", value: "#fb923c" },
+  { name: "Amarillo", value: "#facc15" },
+  { name: "Morado", value: "#a78bfa" },
+  { name: "Cian", value: "#22d3ee" },
+  { name: "Blanco", value: "#ffffff" },
+  { name: "Negro", value: "#1a1a2e" },
+];
+
+type Submission = {
+  id: string;
+  image_path: string;
+  note: string;
+  author: string;
+  approved: boolean;
+  created_at: string;
+};
+
 function Window({ title, children, className = "" }: { title: string; children: React.ReactNode; className?: string }) {
   return (
     <section className={`station-window ${className}`}>
@@ -53,9 +81,8 @@ function Window({ title, children, className = "" }: { title: string; children: 
   );
 }
 
-function Header({ page, setPage }: { page: Page; setPage: (page: Page) => void }) {
+function Header({ page, setPage, onAdminAccess }: { page: Page; setPage: (page: Page) => void; onAdminAccess: () => void }) {
   const [open, setOpen] = useState(false);
-  const [adminOpen, setAdminOpen] = useState(false);
   return (
     <>
       <header className="site-header">
@@ -65,18 +92,35 @@ function Header({ page, setPage }: { page: Page; setPage: (page: Page) => void }
           {nav.map((item) => (
             <button key={item.id} className={page === item.id ? "active" : ""} onClick={() => { setPage(item.id); setOpen(false); }}>{item.label}</button>
           ))}
-          <button onClick={() => setAdminOpen(true)} aria-label="Administración"><LockKeyhole size={14} /> Admin</button>
+          <button onClick={onAdminAccess} aria-label="Administración"><LockKeyhole size={14} /> Admin</button>
         </nav>
       </header>
       <div className="breadcrumb"><Orbit size={12} /><span>Munchxine!</span><span>/</span><span>{page === "inicio" ? "Estudio creativo" : nav.find((item) => item.id === page)?.label}</span><Sparkles size={11} /></div>
-      <Dialog open={adminOpen} onOpenChange={setAdminOpen}>
-        <DialogContent className="station-dialog">
-          <DialogHeader><DialogTitle>admin_login.exe</DialogTitle><DialogDescription>Zona restringida de TeriDayo.</DialogDescription></DialogHeader>
-          <Input type="password" placeholder="Contraseña (teri123)" />
-          <Button variant="signal">Entrar</Button>
-        </DialogContent>
-      </Dialog>
     </>
+  );
+}
+
+function AdminLoginDialog({ open, onOpenChange, onSuccess }: { open: boolean; onOpenChange: (v: boolean) => void; onSuccess: () => void }) {
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const handleLogin = () => {
+    if (password === ADMIN_PASSWORD) {
+      setError("");
+      setPassword("");
+      onSuccess();
+    } else {
+      setError("Contraseña incorrecta");
+    }
+  };
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="station-dialog">
+        <DialogHeader><DialogTitle>admin_login.exe</DialogTitle><DialogDescription>Zona restringida de TeriDayo.</DialogDescription></DialogHeader>
+        <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Contraseña" onKeyDown={(e) => { if (e.key === "Enter") handleLogin(); }} />
+        {error && <p className="admin-error">{error}</p>}
+        <Button variant="signal" onClick={handleLogin}>Entrar</Button>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -151,7 +195,7 @@ function ProfileBand() {
 }
 
 function Home({ setPage }: { setPage: (page: Page) => void }) {
-  return <><TabletExperience setPage={setPage} /><section className="intro-band"><Window title="Munchxine.txt"><div className="intro-copy"><img src={avatarAsset.url} alt="Avatar de Teri" /><div><p className="eyebrow">WELCOME_NOTE.LOG</p><h2>¡Haii! Mi nombre es Maxine.</h2><p>Soy un artista digital enfocado en el arte 2D, tando ilustracion como modelos Vtuber/Pngtuber. </p></div></div></Window></section><ProfileBand /></>;
+  return <><TabletExperience setPage={setPage} /><section className="intro-band"><Window title="Munchxine.txt"><div className="intro-copy"><img src={avatarAsset.url} alt="Avatar de Teri" /><div><p className="eyebrow">WELCOME_NOTE.LOG</p><h2>¡Haii! Mi nombre es Maxine.</h2><p>Soy un artista digital enfocado en el arte 2D, tando ilustracion como modelos Vtuber/Pngtuber. </p></div></div></Window></section><ProfileBand /></>;
 }
 
 function Portfolio() {
@@ -160,24 +204,384 @@ function Portfolio() {
 }
 
 function PaintCanvas() {
-  const ref = useRef<HTMLCanvasElement>(null);
-  const drawing = useRef(false);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const drawingRef = useRef(false);
+  const colorRef = useRef<string>("#69a2ff");
+  const eraserRef = useRef<boolean>(false);
+  const brushSizeRef = useRef<number>(4);
+
+  const [color, setColor] = useState("#69a2ff");
+  const [eraser, setEraser] = useState(false);
+  const [brushSize, setBrushSize] = useState(4);
+  const [author, setAuthor] = useState("");
+  const [note, setNote] = useState("");
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [uploadedImageFile, setUploadedImageFile] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+
+  useEffect(() => {
+    colorRef.current = color;
+  }, [color]);
+  useEffect(() => {
+    eraserRef.current = eraser;
+  }, [eraser]);
+  useEffect(() => {
+    brushSizeRef.current = brushSize;
+  }, [brushSize]);
+
+  const getCtx = () => canvasRef.current?.getContext("2d") ?? null;
+
   const draw = (event: PointerEvent<HTMLCanvasElement>) => {
-    if (!drawing.current || !ref.current) return;
-    const rect = ref.current.getBoundingClientRect();
-    const context = ref.current.getContext("2d");
+    if (!drawingRef.current || !canvasRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const context = getCtx();
     if (!context) return;
-    context.lineWidth = 3; context.lineCap = "round"; context.strokeStyle = "#69a2ff";
-    context.lineTo(event.clientX - rect.left, event.clientY - rect.top); context.stroke();
+    const scaleX = canvasRef.current.width / rect.width;
+    const scaleY = canvasRef.current.height / rect.height;
+    const x = (event.clientX - rect.left) * scaleX;
+    const y = (event.clientY - rect.top) * scaleY;
+    context.lineWidth = brushSizeRef.current;
+    context.lineCap = "round";
+    context.lineJoin = "round";
+    if (eraserRef.current) {
+      context.globalCompositeOperation = "destination-out";
+      context.strokeStyle = "rgba(0,0,0,1)";
+    } else {
+      context.globalCompositeOperation = "source-over";
+      context.strokeStyle = colorRef.current;
+    }
+    context.lineTo(x, y);
+    context.stroke();
   };
-  const start = (event: PointerEvent<HTMLCanvasElement>) => { drawing.current = true; const context = ref.current?.getContext("2d"); if (context) { context.beginPath(); const rect = event.currentTarget.getBoundingClientRect(); context.moveTo(event.clientX - rect.left, event.clientY - rect.top); } };
-  const clear = () => ref.current?.getContext("2d")?.clearRect(0, 0, ref.current.width, ref.current.height);
-  return <Window title="Paint" className="paint-window"><p>Dibuja algo bonito que quieras que vea :3</p><div className="paint-tools"><Brush size={16} /><span>COLOR_#69A2FF</span><Eraser size={16} /></div><canvas ref={ref} width={440} height={220} onPointerDown={start} onPointerMove={draw} onPointerUp={() => drawing.current = false} onPointerLeave={() => drawing.current = false} /><Button variant="station" onClick={clear}><RotateCcw />Limpiar</Button><Textarea placeholder="Una notita para Teri..." /><Button variant="signal"><Send />Enviar dibujo ♡</Button></Window>;
+
+  const start = (event: PointerEvent<HTMLCanvasElement>) => {
+    drawingRef.current = true;
+    const context = getCtx();
+    if (context) {
+      context.beginPath();
+      const rect = event.currentTarget.getBoundingClientRect();
+      const scaleX = canvasRef.current!.width / rect.width;
+      const scaleY = canvasRef.current!.height / rect.height;
+      const x = (event.clientX - rect.left) * scaleX;
+      const y = (event.clientY - rect.top) * scaleY;
+      context.moveTo(x, y);
+    }
+  };
+
+  const clear = () => {
+    const context = getCtx();
+    if (context && canvasRef.current) {
+      context.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+    }
+  };
+
+  const handleImageUpload = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setSubmitStatus({ type: "error", msg: "Solo se permiten imágenes" });
+      return;
+    }
+    setUploadedImageFile(file);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setUploadedImage(e.target?.result as string);
+      const context = getCtx();
+      if (context && canvasRef.current && e.target?.result) {
+        const img = new Image();
+        img.onload = () => {
+          context.globalCompositeOperation = "source-over";
+          context.drawImage(img, 0, 0, canvasRef.current!.width, canvasRef.current!.height);
+        };
+        img.src = e.target.result as string;
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const submit = async () => {
+    setSubmitting(true);
+    setSubmitStatus(null);
+    try {
+      const canvas = canvasRef.current;
+      if (!canvas) throw new Error("No canvas");
+
+      const isEmpty = (() => {
+        const context = getCtx();
+        if (!context) return true;
+        const data = context.getImageData(0, 0, canvas.width, canvas.height).data;
+        for (let i = 3; i < data.length; i += 4) {
+          if (data[i] !== 0) return false;
+        }
+        return true;
+      })();
+
+      if (isEmpty) {
+        setSubmitStatus({ type: "error", msg: "¡Dibuja algo primero!" });
+        setSubmitting(false);
+        return;
+      }
+
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob((b) => resolve(b), "image/png"),
+      );
+      if (!blob) throw new Error("Failed to create image");
+
+      const fileName = `drawing_${Date.now()}_${Math.random().toString(36).slice(2)}.png`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("drawings")
+        .upload(fileName, blob, { contentType: "image/png" });
+
+      if (uploadError) throw uploadError;
+
+      const { error: dbError } = await supabase.from("submissions").insert({
+        image_path: fileName,
+        note: note.trim(),
+        author: author.trim() || "Anónimo",
+        approved: false,
+      });
+
+      if (dbError) throw dbError;
+
+      setSubmitStatus({ type: "success", msg: "¡Dibujo enviado! Maxine lo revisará pronto ♡" });
+      clear();
+      setNote("");
+      setAuthor("");
+      setUploadedImage(null);
+      setUploadedImageFile(null);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Error al enviar";
+      setSubmitStatus({ type: "error", msg: `No se pudo enviar: ${message}` });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Window title="Paint" className="paint-window">
+      <p>Dibuja algo bonito que quieras que vea :3</p>
+      <div className="paint-tools">
+        <div className="color-palette">
+          {colorPresets.map((c) => (
+            <button
+              key={c.value}
+              className={`color-swatch ${color === c.value && !eraser ? "active" : ""}`}
+              style={{ background: c.value }}
+              onClick={() => { setColor(c.value); setEraser(false); }}
+              title={c.name}
+              aria-label={c.name}
+            />
+          ))}
+          <label className="color-custom" title="Color personalizado">
+            <Paintbrush size={14} />
+            <input
+              type="color"
+              value={color}
+              onChange={(e) => { setColor(e.target.value); setEraser(false); }}
+            />
+          </label>
+        </div>
+      </div>
+      <div className="paint-controls">
+        <Button variant={eraser ? "signal" : "station"} size="sm" onClick={() => setEraser(!eraser)}><Eraser size={14} /> Borrador</Button>
+        <Button variant={eraser ? "signal" : "station"} size="sm" onClick={() => { setEraser(false); }}><Brush size={14} /> Pincel</Button>
+        <label className="brush-size-label">
+          <span>Tamaño</span>
+          <input type="range" min={1} max={30} value={brushSize} onChange={(e) => setBrushSize(Number(e.target.value))} />
+          <span className="brush-size-value">{brushSize}px</span>
+        </label>
+        <Button variant="station" size="sm" onClick={clear}><RotateCcw size={14} /> Limpiar</Button>
+      </div>
+      <div className="upload-row">
+        <label className="upload-button">
+          <ImageIcon size={16} />
+          <span>Subir imagen de tu PC</span>
+          <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: "none" }} />
+        </label>
+      </div>
+      <canvas ref={canvasRef} width={440} height={220} onPointerDown={start} onPointerMove={draw} onPointerUp={() => drawingRef.current = false} onPointerLeave={() => drawingRef.current = false} />
+      <Input className="paint-author" placeholder="Tu nombre (opcional)..." value={author} onChange={(e) => setAuthor(e.target.value)} />
+      <Textarea placeholder="Una notita para Teri..." value={note} onChange={(e) => setNote(e.target.value)} />
+      {submitStatus && <p className={`submit-status ${submitStatus.type}`}>{submitStatus.msg}</p>}
+      <Button variant="signal" onClick={submit} disabled={submitting}><Send />{submitting ? "Enviando..." : "Enviar dibujo ♡"}</Button>
+    </Window>
+  );
+}
+
+function GalleryDisplay() {
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      const { data, error } = await supabase
+        .from("submissions")
+        .select("*")
+        .eq("approved", true)
+        .order("created_at", { ascending: false });
+      if (!error && data) setSubmissions(data as Submission[]);
+      setLoading(false);
+    };
+    load();
+  }, []);
+
+  if (loading) return <p className="window-copy">Cargando dibujos de la comunidad...</p>;
+  if (submissions.length === 0) return <p className="window-copy">Aún no hay dibujos aprobados. ¡Sé el primero en enviar uno! ♡</p>;
+
+  return (
+    <div className="community-gallery">
+      {submissions.map((s) => {
+        const { data } = supabase.storage.from("drawings").getPublicUrl(s.image_path);
+        return (
+          <article className="community-art" key={s.id}>
+            <img src={data.publicUrl} alt={`Dibujo de ${s.author}`} />
+            <div className="community-art-info">
+              <strong>{s.author}</strong>
+              {s.note && <p>{s.note}</p>}
+            </div>
+          </article>
+        );
+      })}
+    </div>
+  );
 }
 
 function Community() {
-  const [comments, setComments] = useState<string[]>([]); const [comment, setComment] = useState("");
-  return <main className="page-shell"><div className="page-heading"><p className="eyebrow">COMMUNITY://ONLINE</p><h1>Mi rincón en internet ♡</h1><p>Updates, pensamientos, comentarios y dibujitos de la comunidad.</p></div><div className="community-grid"><Window title="Muro de Maxine" className="wall"><article className="post"><div className="post-author"><img src={avatarAsset.url} alt="Teri" /><div><strong>Maxine <small>ADMIN / DEV :3C</small></strong><span>14 sept 2026, 0:24</span></div></div><p>¡Haii! Bienvenidos al muro oficial de la web.</p></article>{comments.map((item, index) => <article className="comment" key={`${item}-${index}`}>{item}</article>)}<Textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Tu comentario anónimo..." /><Button variant="signal" onClick={() => { if (comment.trim()) { setComments([...comments, comment]); setComment(""); } }}><MessageCircle />Enviar</Button></Window><div className="community-side"><Window title="Bocetos y rayones"><p className="window-copy">Favoritos elegidos por Maxi</p><div className="sketch-card"><img src={avatarAsset.url} alt="Boceto destacado" /><strong>Ask me Anything!</strong></div></Window><PaintCanvas /><Window title="Notita"><p className="window-copy">Los dibujos y comentarios aparecen cuando Maxine los aprueba. Después él puede responderte.</p></Window></div></div><ProfileBand /></main>;
+  const [comments, setComments] = useState<string[]>([]);
+  const [comment, setComment] = useState("");
+  return (
+    <main className="page-shell">
+      <div className="page-heading">
+        <p className="eyebrow">COMMUNITY://ONLINE</p>
+        <h1>Mi rincón en internet ♡</h1>
+        <p>Updates, pensamientos, comentarios y dibujitos de la comunidad.</p>
+      </div>
+      <div className="community-grid">
+        <Window title="Muro de Maxine" className="wall">
+          <article className="post">
+            <div className="post-author">
+              <img src={avatarAsset.url} alt="Teri" />
+              <div><strong>Maxine <small>ADMIN / DEV :3C</small></strong><span>14 sept 2026, 0:24</span></div>
+            </div>
+            <p>¡Haii! Bienvenidos al muro oficial de la web.</p>
+          </article>
+          {comments.map((item, index) => <article className="comment" key={`${item}-${index}`}>{item}</article>)}
+          <Textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Tu comentario anónimo..." />
+          <Button variant="signal" onClick={() => { if (comment.trim()) { setComments([...comments, comment]); setComment(""); } }}><MessageCircle />Enviar</Button>
+        </Window>
+        <div className="community-side">
+          <Window title="Bocetos y rayones">
+            <p className="window-copy">Favoritos elegidos por Maxi</p>
+            <GalleryDisplay />
+          </Window>
+          <PaintCanvas />
+          <Window title="Notita">
+            <p className="window-copy">Los dibujos y comentarios aparecen cuando Maxine los aprueba. Después él puede responderte.</p>
+          </Window>
+        </div>
+      </div>
+      <ProfileBand />
+    </main>
+  );
+}
+
+function AdminPanel({ onClose }: { onClose: () => void }) {
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const loadSubmissions = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("submissions")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) {
+      setError("No se pudieron cargar los envíos. Necesitas iniciar sesión como admin.");
+    } else {
+      setSubmissions(data as Submission[]);
+      setError("");
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    loadSubmissions();
+  }, []);
+
+  const approve = async (id: string) => {
+    const { error } = await supabase.from("submissions").update({ approved: true }).eq("id", id);
+    if (error) {
+      setError("No se pudo aprobar. Necesitas sesión de admin.");
+      return;
+    }
+    setSubmissions((prev) => prev.map((s) => s.id === id ? { ...s, approved: true } : s));
+  };
+
+  const unapprove = async (id: string) => {
+    const { error } = await supabase.from("submissions").update({ approved: false }).eq("id", id);
+    if (error) {
+      setError("No se pudo cambiar el estado.");
+      return;
+    }
+    setSubmissions((prev) => prev.map((s) => s.id === id ? { ...s, approved: false } : s));
+  };
+
+  const remove = async (id: string, imagePath: string) => {
+    const { error: dbError } = await supabase.from("submissions").delete().eq("id", id);
+    if (dbError) {
+      setError("No se pudo eliminar.");
+      return;
+    }
+    await supabase.storage.from("drawings").remove([imagePath]);
+    setSubmissions((prev) => prev.filter((s) => s.id !== id));
+  };
+
+  return (
+    <div className="admin-panel">
+      <div className="admin-panel-header">
+        <h2><LockKeyhole size={18} /> Panel de Administración</h2>
+        <Button variant="station" size="sm" onClick={onClose}><X size={14} /> Cerrar</Button>
+      </div>
+      {error && <p className="admin-error">{error}</p>}
+      {loading ? (
+        <p className="window-copy">Cargando envíos...</p>
+      ) : submissions.length === 0 ? (
+        <p className="window-copy">No hay envíos todavía.</p>
+      ) : (
+        <div className="admin-grid">
+          {submissions.map((s) => {
+            const { data } = supabase.storage.from("drawings").getPublicUrl(s.image_path);
+            return (
+              <article key={s.id} className={`admin-card ${s.approved ? "approved" : "pending"}`}>
+                <div className="admin-card-image">
+                  <img src={data.publicUrl} alt={`Dibujo de ${s.author}`} />
+                  <span className={`admin-badge ${s.approved ? "badge-approved" : "badge-pending"}`}>
+                    {s.approved ? "APROBADO" : "PENDIENTE"}
+                  </span>
+                </div>
+                <div className="admin-card-info">
+                  <strong>{s.author}</strong>
+                  {s.note && <p>{s.note}</p>}
+                  <span className="admin-date">{new Date(s.created_at).toLocaleString("es")}</span>
+                </div>
+                <div className="admin-card-actions">
+                  {!s.approved ? (
+                    <Button variant="signal" size="sm" onClick={() => approve(s.id)}><Check size={14} /> Aprobar</Button>
+                  ) : (
+                    <Button variant="station" size="sm" onClick={() => unapprove(s.id)}><Eye size={14} /> Ocultar</Button>
+                  )}
+                  <Button variant="destructive" size="sm" onClick={() => remove(s.id, s.image_path)}><Trash2 size={14} /> Eliminar</Button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function About() {
@@ -185,12 +589,42 @@ function About() {
 }
 
 function Contact() {
-  const [open, setOpen] = useState(false); const [sent, setSent] = useState(false);
-  return <main className="page-shell narrow"><div className="page-heading"><p className="eyebrow">TERIDAYO.CONTACT // SYSTEM.EXE</p><h1>Contacto</h1><p>Haz clic en el póster de credencial para abrir el canal directo con Teri.</p></div><button className="credential-button" onClick={() => setOpen(true)}><img src={orcaAsset.url} alt="Credencial de orcas" /><span>[ ABRIR CREDENCIAL ]</span></button>{open && <Window title="TeriDayo_contact.exe" className="contact-card"><div className="contact-identity"><img src={avatarAsset.url} alt="Avatar" /><div><p className="eyebrow">@TeriDayo_</p><h2>Anthony Benjamin “TeriDayo”</h2><p>Artista digital 2D + modelador 3D (ESP / ENG)</p></div></div><div className="info-grid"><span><b>Nombre</b>Anthony Benjamin</span><span><b>Pronombres</b>He / Him</span><span><b>Edad</b>20 y/o</span><span><b>Ubicación</b>México 🇲🇽</span></div><h3>¡Hablemos de arte o proyectos! 💬</h3><Input placeholder="Tu nombre o redes..." /><Textarea placeholder="Escribe tu mensaje aquí..." /><Button variant="signal" onClick={() => setSent(true)}><Send />{sent ? "¡Mensaje enviado!" : "Enviar mensaje ♡"}</Button></Window>}<ProfileBand /></main>;
+  const [open, setOpen] = useState(false);
+  const [sent, setSent] = useState(false);
+  return <main className="page-shell narrow"><div className="page-heading"><p className="eyebrow">TERIDAYO.CONTACT // SYSTEM.EXE</p><h1>Contacto</h1><p>Haz clic en el póster de credencial para abrir el canal directo con Teri.</p></div><button className="credential-button" onClick={() => setOpen(true)}><img src={orcaAsset.url} alt="Credencial de orcas" /><span>[ ABRIR CREDENCIAL ]</span></button>{open && <Window title="TeriDayo_contact.exe" className="contact-card"><div className="contact-identity"><img src={avatarAsset.url} alt="Avatar" /><div><p className="eyebrow">@TeriDayo_</p><h2>Anthony Benjamin "TeriDayo"</h2><p>Artista digital 2D + modelador 3D (ESP / ENG)</p></div></div><div className="info-grid"><span><b>Nombre</b>Anthony Benjamin</span><span><b>Pronombres</b>He / Him</span><span><b>Edad</b>20 y/o</span><span><b>Ubicación</b>México 🇲🇽</span></div><h3>¡Hablemos de arte o proyectos! 💬</h3><Input placeholder="Tu nombre o redes..." /><Textarea placeholder="Escribe tu mensaje aquí..." /><Button variant="signal" onClick={() => setSent(true)}><Send />{sent ? "¡Mensaje enviado!" : "Enviar mensaje ♡"}</Button></Window>}<ProfileBand /></main>;
 }
 
 export function TeriApp() {
   const [page, setPageState] = useState<Page>("inicio");
+  const [adminLoginOpen, setAdminLoginOpen] = useState(false);
+  const [adminMode, setAdminMode] = useState(false);
   const setPage = (next: Page) => { setPageState(next); window.scrollTo({ top: 0, behavior: "smooth" }); };
-  return <div className="app-shell"><div className="ambient-grid" /><div className="scanline" /><Header page={page} setPage={setPage} />{page === "inicio" && <Home setPage={setPage} />}{page === "portafolio" && <Portfolio />}{page === "comunidad" && <Community />}{page === "sobre-mi" && <About />}{page === "contacto" && <Contact />}<footer className="system-footer"><span>MUNCHINE ONLINE!</span><span>ENLACES VERIFICADOS · ES · 01:23 P.M.</span><div><Play size={12} /> DEEP_SEA_SIGNAL.WAV</div></footer></div>;
+
+  const handleAdminAccess = () => {
+    if (adminMode) {
+      setAdminMode(true);
+    } else {
+      setAdminLoginOpen(true);
+    }
+  };
+
+  return (
+    <div className="app-shell">
+      <div className="ambient-grid" />
+      <div className="scanline" />
+      <Header page={page} setPage={setPage} onAdminAccess={handleAdminAccess} />
+      {adminMode && <AdminPanel onClose={() => setAdminMode(false)} />}
+      {page === "inicio" && <Home setPage={setPage} />}
+      {page === "portafolio" && <Portfolio />}
+      {page === "comunidad" && <Community />}
+      {page === "sobre-mi" && <About />}
+      {page === "contacto" && <Contact />}
+      <footer className="system-footer"><span>MUNCHINE ONLINE!</span><span>ENLACES VERIFICADOS · ES · 01:23 P.M.</span><div><Play size={12} /> DEEP_SEA_SIGNAL.WAV</div></footer>
+      <AdminLoginDialog
+        open={adminLoginOpen}
+        onOpenChange={setAdminLoginOpen}
+        onSuccess={() => { setAdminMode(true); setAdminLoginOpen(false); }}
+      />
+    </div>
+  );
 }
