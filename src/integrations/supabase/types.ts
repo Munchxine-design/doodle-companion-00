@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      comments: {
+        Row: {
+          author: string
+          avatar_path: string | null
+          created_at: string
+          emoji: string | null
+          id: string
+          is_admin: boolean
+          message: string
+          parent_id: string | null
+        }
+        Insert: {
+          author?: string
+          avatar_path?: string | null
+          created_at?: string
+          emoji?: string | null
+          id?: string
+          is_admin?: boolean
+          message: string
+          parent_id?: string | null
+        }
+        Update: {
+          author?: string
+          avatar_path?: string | null
+          created_at?: string
+          emoji?: string | null
+          id?: string
+          is_admin?: boolean
+          message?: string
+          parent_id?: string | null
+        }
+        Relationships: []
+      }
+      site_settings: {
+        Row: {
+          admin_avatar_path: string | null
+          admin_display_name: string
+          color_presets: Json
+          id: number
+          placeholder_images: Json
+          updated_at: string
+        }
+        Insert: {
+          admin_avatar_path?: string | null
+          admin_display_name?: string
+          color_presets?: Json
+          id?: number
+          placeholder_images?: Json
+          updated_at?: string
+        }
+        Update: {
+          admin_avatar_path?: string | null
+          admin_display_name?: string
+          color_presets?: Json
+          id?: number
+          placeholder_images?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       submissions: {
         Row: {
           approved: boolean
