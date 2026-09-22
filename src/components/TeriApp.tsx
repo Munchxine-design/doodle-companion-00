@@ -144,7 +144,7 @@ function AvatarBlueprint({ mode }: { mode: "sketch" | "line" }) {
 function ProfileBand() {
   return (
     <section className="profile-band">
-      <Window title="Munchxine_profile.exe"><div className="profile-content"><img src={avatarAsset.url} alt="Avatar pixel art de TeriDayo" /><div><p className="eyebrow">HIYAAA!!</p><h2>TeriDayo / Anthony / Matt</h2><p>Artista chileno de 19 años • Arte 2D y 3D • ESP / ENG</p><div className="tags"><span>Roblox</span><span>ARGs</span><span>Pokemon</span></div></div></div></Window>
+      <Window title="Munchxine_profile.exe"><div className="profile-content"><img src={avatarAsset.url} alt="Avatar pixel art de TeriDayo" /><div><p className="eyebrow">HIYAAA!!</p><h2>Maxine/ Munchy / Moopy</h2><p>Artista chileno de 19 años • Arte 2D y 3D • ESP / ENG</p><div className="tags"><span>Roblox</span><span>ARGs</span><span>Pokemon</span></div></div></div></Window>
       <Window title="ACCESOS_DIRECTOS"><div className="online-content"><h2>Maxine Online!</h2><div className="social-row"><Button variant="station"><X /> Twitter / X</Button><Button variant="station"><Coffee /> Ko-fi</Button></div><div className="online-art"><img src={avatarAsset.url} alt="Teri online" /><span>@Munchxine_</span></div></div></Window>
     </section>
   );
@@ -156,7 +156,7 @@ function Home({ setPage }: { setPage: (page: Page) => void }) {
 
 function Portfolio() {
   const [category, setCategory] = useState("Todas las obras");
-  return <main className="page-shell"><div className="page-heading"><p className="eyebrow">ARCHIVE://VISUAL_WORKS</p><h1>Portafolio de arte</h1><p>Dibujos, GIFs, videos, ideas y universos guardados en carpetas.</p></div><div className="portfolio-layout"><Window title="Carpetas de Teri" className="folder-window">{["Todas las obras", "Drawings", "Doodles", "Renders"].map((name) => <Button key={name} variant={category === name ? "signal" : "station"} onClick={() => setCategory(name)}><Folder />{name}</Button>)}</Window><Window title={category} className="gallery-window"><div className="gallery-grid"><article className="art-card"><div className="art-preview"><img src={avatarAsset.url} alt="MEGAMAN" /></div><strong>MEGAMAN!!!</strong><span>DIGITAL_ARCHIVE_001</span></article></div></Window></div><ProfileBand /></main>;
+  return <main className="page-shell"><div className="page-heading"><p className="eyebrow">ARCHIVE://VISUAL_WORKS</p><h1>Portafolio de arte</h1><p>Dibujos, GIFs, videos, ideas y universos guardados en carpetas.</p></div><div className="portfolio-layout"><Window title="Carpetas de Maxine" className="folder-window">{["Todas las obras", "Drawings", "Doodles", "Renders"].map((name) => <Button key={name} variant={category === name ? "signal" : "station"} onClick={() => setCategory(name)}><Folder />{name}</Button>)}</Window><Window title={category} className="gallery-window"><div className="gallery-grid"><article className="art-card"><div className="art-preview"><img src={avatarAsset.url} alt="MEGAMAN" /></div><strong>MEGAMAN!!!</strong><span>DIGITAL_ARCHIVE_001</span></article></div></Window></div><ProfileBand /></main>;
 }
 
 function PaintCanvas() {
