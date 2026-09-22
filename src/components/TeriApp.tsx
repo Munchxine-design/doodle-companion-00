@@ -192,5 +192,5 @@ function Contact() {
 export function TeriApp() {
   const [page, setPageState] = useState<Page>("inicio");
   const setPage = (next: Page) => { setPageState(next); window.scrollTo({ top: 0, behavior: "smooth" }); };
-  return <div className="app-shell"><div className="ambient-grid" /><div className="scanline" /><Header page={page} setPage={setPage} />{page === "inicio" && <Home setPage={setPage} />}{page === "portafolio" && <Portfolio />}{page === "comunidad" && <Community />}{page === "sobre-mi" && <About />}{page === "contacto" && <Contact />}<footer className="system-footer"><span>TERI ONLINE!</span><span>ENLACES VERIFICADOS · ES · 01:23 P.M.</span><div><Play size={12} /> DEEP_SEA_SIGNAL.WAV</div></footer></div>;
+  return <div className="app-shell"><div className="ambient-grid" /><div className="scanline" /><Header page={page} setPage={setPage} />{page === "inicio" && <Home setPage={setPage} />}{page === "portafolio" && <Portfolio />}{page === "comunidad" && <Community />}{page === "sobre-mi" && <About />}{page === "contacto" && <Contact />}<footer className="system-footer"><span>MUNCHINE ONLINE!</span><span>ENLACES VERIFICADOS · ES · 01:23 P.M.</span><div><Play size={12} /> DEEP_SEA_SIGNAL.WAV</div></footer></div>;
 }
