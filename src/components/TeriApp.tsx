@@ -821,7 +821,44 @@ function About() {
 function Contact() {
   const [open, setOpen] = useState(false);
   const [sent, setSent] = useState(false);
-  return <main className="page-shell narrow"><div className="page-heading"><p className="eyebrow">TERIDAYO.CONTACT // SYSTEM.EXE</p><h1>Contacto</h1><p>Haz clic en el póster de credencial para abrir el canal directo con Teri.</p></div><button className="credential-button" onClick={() => setOpen(true)}><img src={orcaAsset.url} alt="Credencial de orcas" /><span>[ ABRIR CREDENCIAL ]</span></button>{open && <Window title="TeriDayo_contact.exe" className="contact-card"><div className="contact-identity"><img src={avatarAsset.url} alt="Avatar" /><div><p className="eyebrow">@TeriDayo_</p><h2>Anthony Benjamin "TeriDayo"</h2><p>Artista digital 2D + modelador 3D (ESP / ENG)</p></div></div><div className="info-grid"><span><b>Nombre</b>Anthony Benjamin</span><span><b>Pronombres</b>He / Him</span><span><b>Edad</b>20 y/o</span><span><b>Ubicación</b>México 🇲🇽</span></div><h3>¡Hablemos de arte o proyectos! 💬</h3><Input placeholder="Tu nombre o redes..." /><Textarea placeholder="Escribe tu mensaje aquí..." /><Button variant="signal" onClick={() => setSent(true)}><Send />{sent ? "¡Mensaje enviado!" : "Enviar mensaje ♡"}</Button></Window>}<ProfileBand /></main>;
+  return (
+    <main className="page-shell narrow">
+      <div className="page-heading">
+        <p className="eyebrow">TERIDAYO.CONTACT // SYSTEM.EXE</p>
+        <h1>Contacto</h1>
+        <p>Haz clic en el póster de credencial para abrir el canal directo con Teri.</p>
+      </div>
+      <button className="credential-button" onClick={() => setOpen(true)}>
+        <img src={orcaAsset.url} alt="Credencial de orcas" />
+        <span>[ ABRIR CREDENCIAL ]</span>
+      </button>
+      {open && (
+        <Window title="TeriDayo_contact.exe" className="contact-card">
+          <div className="contact-identity">
+            <img src={avatarAsset.url} alt="Avatar" />
+            <div>
+              <p className="eyebrow">@TeriDayo_</p>
+              <h2>Anthony Benjamin "TeriDayo"</h2>
+              <p>Artista digital 2D + modelador 3D (ESP / ENG)</p>
+            </div>
+          </div>
+          <div className="info-grid">
+            <span><b>Nombre</b>Anthony Benjamin</span>
+            <span><b>Pronombres</b>He / Him</span>
+            <span><b>Edad</b>20 y/o</span>
+            <span><b>Ubicación</b>Penco, Chile 🇨🇱</span>
+          </div>
+          <h3>¡Hablemos de arte o proyectos! 💬</h3>
+          <Input placeholder="Tu nombre o redes..." />
+          <Textarea placeholder="Escribe tu mensaje aquí..." />
+          <Button variant="signal" onClick={() => setSent(true)}>
+            <Send />{sent ? "¡Mensaje enviado!" : "Enviar mensaje ♡"}
+          </Button>
+        </Window>
+      )}
+      <ProfileBand />
+    </main>
+  );
 }
 
 export function TeriApp() {
