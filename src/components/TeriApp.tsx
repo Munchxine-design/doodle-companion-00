@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent, type ChangeEvent } from "react";
-import { Brush, Check, ChevronDown, Coffee, CornerDownRight, Eraser, Eye, Folder, Image as ImageIcon, LockKeyhole, Menu, MessageCircle, Minus, Orbit, Paintbrush, Play, Pause, RotateCcw, Send, Smile, Sparkles, Square, Trash2, X, Music } from "lucide-react";
+import { Brush, Check, ChevronDown, Coffee, CornerDownRight, Eraser, Eye, Folder, Image as ImageIcon, LockKeyhole, Menu, MessageCircle, Minus, Orbit, Paintbrush, Play, Pause, RotateCcw, Send, Smile, Sparkles, Square, Trash2, X, Music, LogOut } from "lucide-react";
 import avatarAsset from "@/assets/teridayo-avatar.png.asset.json";
 import orcaAsset from "@/assets/orca-credential.jpg.asset.json";
 import { Button } from "@/components/ui/button";
@@ -63,7 +63,7 @@ type PortfolioItem = {
   image_path: string;
 };
 
-// Estados globales almacenados en LocalStorage
+// --- MÉTODOS DE LOCALSTORAGE SEGUROS ---
 const getStoredProfile = () => {
   return JSON.parse(localStorage.getItem("site_profile") || JSON.stringify({ name: "Maxine", avatar: avatarAsset.url }));
 };
@@ -74,7 +74,6 @@ const getStoredImagesConfig = () => {
     homeDirects: avatarAsset.url,
     homeIntro: avatarAsset.url,
     aboutMain: avatarAsset.url,
-    aboutInterests: avatarAsset.url,
     credential: orcaAsset.url,
   }));
 };
@@ -104,16 +103,16 @@ const getStoredShimeji = () => {
   return localStorage.getItem("site_shimeji_img") || avatarAsset.url;
 };
 
-// --- COMPONENTE SHIMEJI (Mascota Virtual) ---
+// --- COMPONENTE SHIMEJI CORREGIDO ---
 function VirtualShimeji() {
-  const [pos, setPos] = useState({ x: 100, y: window.innerHeight - 120 });
+  const [pos, setPos] = useState({ x: 50, y: window.innerHeight - 100 });
   const [isDragging, setIsDragging] = useState(false);
   const shimejiImg = getStoredShimeji();
 
   useEffect(() => {
     const handleMove = (e: MouseEvent) => {
       if (!isDragging) return;
-      setPos({ x: e.clientX - 25, y: e.clientY - 25 });
+      setPos({ x: e.clientX - 30, y: e.clientY - 30 });
     };
     const handleUp = () => setIsDragging(false);
 
@@ -135,15 +134,19 @@ function VirtualShimeji() {
         top: `${pos.y}px`,
         zIndex: 9998,
         cursor: 'grab',
-        width: '50px',
-        height: '50px',
-        filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.4))',
+        width: '60px',
+        height: '60px',
         userSelect: 'none',
+        pointerEvents: 'auto',
       }}
       onMouseDown={() => setIsDragging(true)}
-      title="¡Arrástrame como un Shimeji!"
+      title="¡Mascota Shimeji! Arrástrame"
     >
-      <img src={shimejiImg} alt="Shimeji" style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }} />
+      <img 
+        src={shimejiImg} 
+        alt="Shimeji" 
+        style={{ width: '100%', height: '100%', objectFit: 'contain', filter: 'drop-shadow(2px 4px 6px rgba(0,0,0,0.5))', pointerEvents: 'none' }} 
+      />
     </div>
   );
 }
@@ -314,7 +317,7 @@ function ProfileBand() {
   const images = getStoredImagesConfig();
   return (
     <section className="profile-band">
-      <Window title="Munchxine_profile.exe"><div className="profile-content"><img src={images.homeProfile} alt="Avatar pixel art de TeriDayo" /><div><p className="eyebrow">HIYAAA!!</p><h2>{profile.name}</h2><p>Artista chileno de 19 años • Arte 2D y 3D • ESP / ENG</p><div className="tags"><span>Roblox</span><span>ARGs</span><span>Pokemon</span></div></div></div></Window>
+      <Window title="Munchxine_profile.exe"><div className="profile-content"><img src={images.homeProfile} alt="Avatar pixel art" /><div><p className="eyebrow">HIYAAA!!</p><h2>{profile.name}</h2><p>Artista chileno de 19 años • Arte 2D y 3D • ESP / ENG</p><div className="tags"><span>Roblox</span><span>ARGs</span><span>Pokemon</span></div></div></div></Window>
       <Window title="ACCESOS_DIRECTOS"><div className="online-content"><h2>Maxine Online!</h2><div className="social-row"><Button variant="station"><X /> Twitter / X</Button><Button variant="station"><Coffee /> Ko-fi</Button></div><div className="online-art"><img src={images.homeDirects} alt="Teri online" /><span>@Munchxine_</span></div></div></Window>
     </section>
   );
@@ -575,6 +578,21 @@ function CommentThread({ comment, replies, adminMode, customEmojis, onReply, onD
     setShowEmojiPicker(false);
   };
 
+  // Renderizar contenido reemplazando tags de emojis por imágenes
+  const renderFormattedContent = (text: string) => {
+    const parts = text.split(/(\[emoji:[^\]]+\])/g);
+    return parts.map((part, i) => {
+      if (part.startsWith("[emoji:") && part.endsWith("]")) {
+        const emojiName = part.slice(7, -1);
+        const found = customEmojis.find(e => e.name === emojiName);
+        if (found) {
+          return <img key={i} src={found.url} alt={emojiName} width={18} height={18} style={{ display: 'inline-block', verticalAlign: 'middle', margin: '0 2px' }} />;
+        }
+      }
+      return part;
+    });
+  };
+
   return (
     <>
       <article className={`comment ${comment.is_admin_reply ? "admin-reply" : ""}`}>
@@ -582,7 +600,7 @@ function CommentThread({ comment, replies, adminMode, customEmojis, onReply, onD
           <strong>{comment.author}{comment.is_admin_reply && <small className="admin-tag">ADMIN</small>}</strong>
           <span className="comment-date">{new Date(comment.created_at).toLocaleDateString("es", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
         </div>
-        <p className="comment-content">{comment.content}</p>
+        <p className="comment-content">{renderFormattedContent(comment.content)}</p>
         <div className="comment-actions">
           <button className="comment-action-btn" onClick={() => setShowReplyBox(!showReplyBox)}><CornerDownRight size={12} /> Responder</button>
           {adminMode && <button className="comment-action-btn danger" onClick={() => onDelete(comment.id)}><Trash2 size={12} /> Eliminar</button>}
@@ -592,9 +610,9 @@ function CommentThread({ comment, replies, adminMode, customEmojis, onReply, onD
             <div className="emoji-row">
               <button className="emoji-toggle" onClick={() => setShowEmojiPicker(!showEmojiPicker)}><Smile size={16} /> Emojis</button>
               {showEmojiPicker && (
-                <div className="emoji-picker" style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                <div className="emoji-picker" style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', background: '#0a192f', padding: '8px', borderRadius: '6px' }}>
                   {customEmojis.map((emoji, idx) => (
-                    <button key={idx} className="emoji-btn" onClick={() => setReplyText(replyText + ` [emoji:${emoji.name}] `)} style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}>
+                    <button key={idx} className="emoji-btn" onClick={() => setReplyText(replyText + ` [emoji:${emoji.name}] `)} style={{ background: 'transparent', border: '1px solid #1e3a8a', borderRadius: '4px', cursor: 'pointer', padding: '4px' }}>
                       <img src={emoji.url} alt={emoji.name} width={20} height={20} style={{ objectFit: 'contain' }} />
                     </button>
                   ))}
@@ -614,7 +632,7 @@ function CommentThread({ comment, replies, adminMode, customEmojis, onReply, onD
                 <strong>{reply.author}{reply.is_admin_reply && <small className="admin-tag">ADMIN</small>}</strong>
                 <span className="comment-date">{new Date(reply.created_at).toLocaleDateString("es", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
               </div>
-              <p className="comment-content">{reply.content}</p>
+              <p className="comment-content">{renderFormattedContent(reply.content)}</p>
               {adminMode && (
                 <div className="comment-actions">
                   <button className="comment-action-btn danger" onClick={() => onDelete(reply.id)}><Trash2 size={12} /> Eliminar</button>
@@ -687,6 +705,20 @@ function Community({ adminMode }: { adminMode: boolean }) {
   const topLevel = comments.filter((c) => !c.parent_id && (c.approved || adminMode));
   const getReplies = (parentId: string) => comments.filter((c) => c.parent_id === parentId);
 
+  const renderFormattedContent = (text: string) => {
+    const parts = text.split(/(\[emoji:[^\]]+\])/g);
+    return parts.map((part, i) => {
+      if (part.startsWith("[emoji:") && part.endsWith("]")) {
+        const emojiName = part.slice(7, -1);
+        const found = customEmojis.find((e: { name: string; url: string }) => e.name === emojiName);
+        if (found) {
+          return <img key={i} src={found.url} alt={emojiName} width={18} height={18} style={{ display: 'inline-block', verticalAlign: 'middle', margin: '0 2px' }} />;
+        }
+      }
+      return part;
+    });
+  };
+
   return (
     <main className="page-shell">
       <div className="page-heading">
@@ -722,9 +754,9 @@ function Community({ adminMode }: { adminMode: boolean }) {
           <div className="emoji-row">
             <button className="emoji-toggle" onClick={() => setShowEmojiPicker(!showEmojiPicker)}><Smile size={16} /> Emojis personalizados</button>
             {showEmojiPicker && (
-              <div className="emoji-picker" style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+              <div className="emoji-picker" style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', background: '#0a192f', padding: '8px', borderRadius: '6px' }}>
                 {customEmojis.map((emoji: { name: string; url: string }, idx: number) => (
-                  <button key={idx} className="emoji-btn" onClick={() => setComment(comment + ` [emoji:${emoji.name}] `)} style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}>
+                  <button key={idx} className="emoji-btn" onClick={() => setComment(comment + ` [emoji:${emoji.name}] `)} style={{ background: 'transparent', border: '1px solid #1e3a8a', borderRadius: '4px', cursor: 'pointer', padding: '4px' }}>
                     <img src={emoji.url} alt={emoji.name} width={20} height={20} style={{ objectFit: 'contain' }} />
                   </button>
                 ))}
@@ -750,7 +782,7 @@ function Community({ adminMode }: { adminMode: boolean }) {
   );
 }
 
-function AdminPanel({ onClose }: { onClose: () => void }) {
+function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () => void }) {
   const [activeTab, setActiveTab] = useState<"envios" | "perfil" | "imagenes" | "emojis" | "musica" | "shimeji" | "organizador">("envios");
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   
@@ -844,9 +876,12 @@ function AdminPanel({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="admin-panel">
-      <div className="admin-panel-header">
+      <div className="admin-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2><LockKeyhole size={18} /> Panel de Administración</h2>
-        <Button variant="station" size="sm" onClick={onClose}><X size={14} /> Cerrar</Button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <Button variant="destructive" size="sm" onClick={onLogout}><LogOut size={14} /> Cerrar sesión</Button>
+          <Button variant="station" size="sm" onClick={onClose}><X size={14} /> Cerrar</Button>
+        </div>
       </div>
 
       <div className="admin-tabs-nav" style={{ display: 'flex', gap: '5px', background: '#0a192f', padding: '8px', borderRadius: '6px', marginBottom: '20px', border: '1px solid #1e3a8a', flexWrap: 'wrap' }}>
@@ -1015,7 +1050,7 @@ function AdminPanel({ onClose }: { onClose: () => void }) {
       {activeTab === "musica" && (
         <div style={{ padding: '20px', background: '#0f203b', borderRadius: '8px', border: '1px solid #1e3a8a' }}>
           <h3 style={{ marginBottom: '15px' }}><Music size={16} /> Widget de Música (Estilo WinXP)</h3>
-          <p style={{ color: '#8892b0', fontSize: '13px', marginBottom: '15px' }}>Pega el enlace directo a un archivo de audio (MP3 / OGG) o sube uno:</p>
+          <p style={{ color: '#8892b0', fontSize: '13px', marginBottom: '15px' }}>Pega el enlace directo a un archivo de audio (MP3 / OGG):</p>
           <Input placeholder="Título de la canción..." value={music.title} onChange={(e) => setMusic({ ...music, title: e.target.value })} style={{ marginBottom: '10px' }} />
           <Input placeholder="URL del audio (.mp3 o .ogg)..." value={music.url} onChange={(e) => setMusic({ ...music, url: e.target.value })} style={{ marginBottom: '15px' }} />
           <Button variant="signal" onClick={() => {
@@ -1028,7 +1063,7 @@ function AdminPanel({ onClose }: { onClose: () => void }) {
       {activeTab === "shimeji" && (
         <div style={{ padding: '20px', background: '#0f203b', borderRadius: '8px', border: '1px solid #1e3a8a' }}>
           <h3 style={{ marginBottom: '15px' }}>Mascota Virtual (Shimeji)</h3>
-          <p style={{ color: '#8892b0', fontSize: '13px', marginBottom: '15px' }}>Sube la imagen PNG de tu personaje para que camine y flote por tu pantalla:</p>
+          <p style={{ color: '#8892b0', fontSize: '13px', marginBottom: '15px' }}>Sube la imagen PNG de tu personaje:</p>
           <img src={shimejiImg} alt="Shimeji preview" width={80} height={80} style={{ objectFit: 'contain', background: '#0a192f', borderRadius: '8px', padding: '5px', marginBottom: '10px', border: '1px solid #1e3a8a' }} />
           <label className="upload-button" style={{ background: '#1e3a8a', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', display: 'inline-block', marginBottom: '15px' }}>
             <ImageIcon size={14} /> Seleccionar imagen PNG
@@ -1189,7 +1224,7 @@ export function TeriApp() {
       <div className="ambient-grid" />
       <div className="scanline" />
       <Header page={page} setPage={setPage} onAdminAccess={handleAdminAccess} />
-      {adminMode && <AdminPanel onClose={() => setAdminMode(false)} />}
+      {adminMode && <AdminPanel onClose={() => setAdminMode(false)} onLogout={() => setAdminMode(false)} />}
       {page === "inicio" && <Home setPage={setPage} />}
       {page === "portafolio" && <Portfolio />}
       {page === "comunidad" && <Community adminMode={adminMode} />}
