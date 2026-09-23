@@ -658,6 +658,7 @@ function Community({ adminMode }: { adminMode: boolean }) {
 }
 
 function AdminPanel({ onClose }: { onClose: () => void }) {
+  const [activeTab, setActiveTab] = useState<"envios" | "perfil" | "imagenes" | "emojis" | "organizador">("envios");
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -684,7 +685,7 @@ function AdminPanel({ onClose }: { onClose: () => void }) {
   const approve = async (id: string) => {
     const { error } = await supabase.from("submissions").update({ approved: true }).eq("id", id);
     if (error) {
-      setError("No se pudo aprobar. Necesitas sesión de admin.");
+      setError("No se pudo aprobar.");
       return;
     }
     setSubmissions((prev) => prev.map((s) => s.id === id ? { ...s, approved: true } : s));
@@ -715,39 +716,113 @@ function AdminPanel({ onClose }: { onClose: () => void }) {
         <h2><LockKeyhole size={18} /> Panel de Administración</h2>
         <Button variant="station" size="sm" onClick={onClose}><X size={14} /> Cerrar</Button>
       </div>
+
+      <div className="admin-tabs-nav" style={{ display: 'flex', gap: '5px', background: '#0a192f', padding: '8px', borderRadius: '6px', marginBottom: '20px', border: '1px solid #1e3a8a' }}>
+        <Button variant={activeTab === "envios" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("envios")}>Envíos</Button>
+        <Button variant={activeTab === "perfil" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("perfil")}>Perfil</Button>
+        <Button variant={activeTab === "imagenes" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("imagenes")}>Imágenes</Button>
+        <Button variant={activeTab === "emojis" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("emojis")}>Emojis</Button>
+        <Button variant={activeTab === "organizador" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("organizador")}>Organizador</Button>
+      </div>
+
       {error && <p className="admin-error">{error}</p>}
-      {loading ? (
-        <p className="window-copy">Cargando envíos...</p>
-      ) : submissions.length === 0 ? (
-        <p className="window-copy">No hay envíos todavía.</p>
-      ) : (
-        <div className="admin-grid">
-          {submissions.map((s) => {
-            const { data } = supabase.storage.from("drawings").getPublicUrl(s.image_path);
-            return (
-              <article key={s.id} className={`admin-card ${s.approved ? "approved" : "pending"}`}>
-                <div className="admin-card-image">
-                  <img src={data.publicUrl} alt={`Dibujo de ${s.author}`} />
-                  <span className={`admin-badge ${s.approved ? "badge-approved" : "badge-pending"}`}>
-                    {s.approved ? "APROBADO" : "PENDIENTE"}
-                  </span>
-                </div>
-                <div className="admin-card-info">
-                  <strong>{s.author}</strong>
-                  {s.note && <p>{s.note}</p>}
-                  <span className="admin-date">{new Date(s.created_at).toLocaleString("es")}</span>
-                </div>
-                <div className="admin-card-actions">
-                  {!s.approved ? (
-                    <Button variant="signal" size="sm" onClick={() => approve(s.id)}><Check size={14} /> Aprobar</Button>
-                  ) : (
-                    <Button variant="station" size="sm" onClick={() => unapprove(s.id)}><Eye size={14} /> Ocultar</Button>
-                  )}
-                  <Button variant="destructive" size="sm" onClick={() => remove(s.id, s.image_path)}><Trash2 size={14} /> Eliminar</Button>
-                </div>
-              </article>
-            );
-          })}
+
+      {activeTab === "envios" && (
+        loading ? (
+          <p className="window-copy">Cargando envíos...</p>
+        ) : submissions.length === 0 ? (
+          <p className="window-copy">No hay envíos todavía.</p>
+        ) : (
+          <div className="admin-grid">
+            {submissions.map((s) => {
+              const { data } = supabase.storage.from("drawings").getPublicUrl(s.image_path);
+              return (
+                <article key={s.id} className={`admin-card ${s.approved ? "approved" : "pending"}`}>
+                  <div className="admin-card-image">
+                    <img src={data.publicUrl} alt={`Dibujo de ${s.author}`} />
+                    <span className={`admin-badge ${s.approved ? "badge-approved" : "badge-pending"}`}>
+                      {s.approved ? "APROBADO" : "PENDIENTE"}
+                    </span>
+                  </div>
+                  <div className="admin-card-info">
+                    <strong>{s.author}</strong>
+                    {s.note && <p>{s.note}</p>}
+                    <span className="admin-date">{new Date(s.created_at).toLocaleString("es")}</span>
+                  </div>
+                  <div className="admin-card-actions">
+                    {!s.approved ? (
+                      <Button variant="signal" size="sm" onClick={() => approve(s.id)}><Check size={14} /> Aprobar</Button>
+                    ) : (
+                      <Button variant="station" size="sm" onClick={() => unapprove(s.id)}><Eye size={14} /> Ocultar</Button>
+                    )}
+                    <Button variant="destructive" size="sm" onClick={() => remove(s.id, s.image_path)}><Trash2 size={14} /> Eliminar</Button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )
+      )}
+
+      {activeTab === "perfil" && (
+        <div style={{ padding: '20px', background: '#0f203b', borderRadius: '8px', border: '1px solid #1e3a8a' }}>
+          <h3 style={{ marginBottom: '20px' }}>Datos de perfil</h3>
+          <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+            <div style={{ width: '150px' }}>
+              <img src={avatarAsset.url} alt="Profile" style={{ width: '100%', borderRadius: '8px', border: '1px solid #1e3a8a' }} />
+              <Button variant="station" size="sm" style={{ marginTop: '10px', width: '100%' }}>Cambiar foto</Button>
+            </div>
+            <div style={{ flex: 1, minWidth: '250px' }}>
+              <label style={{ fontSize: '10px', color: '#69a2ff', textTransform: 'uppercase', letterSpacing: '1px' }}>Nombre de usuario</label>
+              <Input defaultValue={ADMIN_DISPLAY_NAME} style={{ marginTop: '8px', marginBottom: '15px' }} />
+              <Button variant="signal" style={{ width: '100%' }}>GUARDAR PERFIL</Button>
+              <p style={{ fontSize: '12px', marginTop: '10px', color: '#8892b0' }}>Este nombre y foto aparecerán en comentarios y secciones del sitio.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === "imagenes" && (
+        <div style={{ padding: '20px', background: '#0f203b', borderRadius: '8px', border: '1px solid #1e3a8a' }}>
+          <h3 style={{ marginBottom: '15px' }}>Imágenes del sitio</h3>
+          <p style={{ color: '#8892b0', fontSize: '14px', marginBottom: '20px' }}>Módulo de gestión de recursos gráficos en construcción. Aquí podrás actualizar el avatar principal y las credenciales sin tocar el código.</p>
+        </div>
+      )}
+
+      {activeTab === "emojis" && (
+        <div style={{ padding: '20px', background: '#0f203b', borderRadius: '8px', border: '1px solid #1e3a8a' }}>
+          <h3 style={{ marginBottom: '15px' }}>Emojis personalizados</h3>
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+            <Input placeholder="Nombre del emoji..." />
+            <Button variant="signal">SUBIR EMOJI</Button>
+          </div>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            {customEmojis.slice(0, 5).map(e => (
+              <div key={e} style={{ position: 'relative', width: '50px', height: '50px', background: '#0a192f', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px', border: '1px solid #1e3a8a' }}>
+                <span style={{ fontSize: '24px' }}>{e}</span>
+                <button style={{ position: 'absolute', top: '-5px', right: '-5px', background: '#ef4444', borderRadius: '50%', width: '18px', height: '18px', fontSize: '10px', border: 'none', color: 'white', cursor: 'pointer' }}>✕</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {activeTab === "organizador" && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+          <div style={{ padding: '20px', background: '#0f203b', borderRadius: '8px', border: '1px solid #1e3a8a' }}>
+            <h3 style={{ marginBottom: '15px' }}>🗓️ Calendario</h3>
+            <div style={{ background: '#0a192f', height: '200px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8892b0', border: '1px dashed #1e3a8a' }}>
+              [ Módulo Notion en construcción ]
+            </div>
+          </div>
+          <div style={{ padding: '20px', background: '#0f203b', borderRadius: '8px', border: '1px solid #1e3a8a' }}>
+            <h3 style={{ marginBottom: '15px' }}>✅ To-Do List</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#caddff' }}><input type="checkbox" defaultChecked /> Terminar ilustraciones VRChat</label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#caddff' }}><input type="checkbox" /> Configurar panel Strawpage</label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#caddff' }}><input type="checkbox" /> Conectar chat de contacto</label>
+            </div>
+          </div>
         </div>
       )}
     </div>
