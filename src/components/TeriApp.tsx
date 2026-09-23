@@ -113,7 +113,7 @@ const getStoredShimejiConfig = () => {
   };
 };
 
-// --- COMPONENTE SHIMEJI AVANZADO CON IA DE ESTADOS (Caminar, trepar, caer, arrastrar, idle y clics aleatorios) ---
+// --- COMPONENTE SHIMEJI AVANZADO CON SEGUIMIENTO DE CURSOR PERFECTO ---
 function VirtualShimeji() {
   const [config, setConfig] = useState(getStoredShimejiConfig);
   const [pos, setPos] = useState({ x: 120, y: window.innerHeight - 90 });
@@ -121,7 +121,10 @@ function VirtualShimeji() {
   const [direction, setDirection] = useState<1 | -1>(1);
   const [frameIndex, setFrameIndex] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
-  const dragOffsetRef = useRef({ x: 0, y: 0 });
+  
+  const dragOffsetRef = useRef({ x: 32, y: 32 });
+  const isDraggingRef = useRef(isDragging);
+  isDraggingRef.current = isDragging;
 
   // Actualizar config si cambia desde admin
   useEffect(() => {
@@ -141,18 +144,43 @@ function VirtualShimeji() {
     return () => clearInterval(interval);
   }, [currentFrames.length, state]);
 
-  // Máquina de estados (IA de comportamiento del Shimeji)
+  // Manejo global del movimiento del mouse al arrastrar
+  useEffect(() => {
+    const handlePointerMove = (e: globalThis.PointerEvent) => {
+      if (!isDraggingRef.current) return;
+      setPos({
+        x: e.clientX - dragOffsetRef.current.x,
+        y: e.clientY - dragOffsetRef.current.y,
+      });
+    };
+
+    const handlePointerUp = () => {
+      if (isDraggingRef.current) {
+        setIsDragging(false);
+        setState("fall"); // Al soltarlo cae por gravedad
+      }
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("mouseup", handlePointerUp);
+    window.addEventListener("pointerup", handlePointerUp);
+
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("mouseup", handlePointerUp);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, []);
+
+  // Máquina de estados autónomos (cuando no se está arrastrando)
   useEffect(() => {
     if (isDragging) return;
 
     const timer = setInterval(() => {
       setState((currentState) => {
-        // Si está ejecutando animación de clic, dejar que termine un ciclo y volver a caminar/idle
         if (currentState === "click1" || currentState === "click2") {
           return "walk";
         }
-
-        // Si está caminando, hay probabilidad de que se siente (idle) o empiece a trepar si llega a la pared
         if (currentState === "walk") {
           const rand = Math.random();
           if (rand < 0.15) return "idle";
@@ -167,7 +195,7 @@ function VirtualShimeji() {
     return () => clearInterval(timer);
   }, [isDragging]);
 
-  // Bucle físico de movimiento y gravedad
+  // Bucle físico (Caminar, trepar, caer)
   useEffect(() => {
     if (isDragging) return;
 
@@ -183,7 +211,7 @@ function VirtualShimeji() {
         let nextState = state;
 
         if (state === "fall") {
-          nextY += 8;
+          nextY += 10;
           if (nextY >= groundLevel) {
             nextY = groundLevel;
             nextState = "walk";
@@ -198,7 +226,6 @@ function VirtualShimeji() {
           if (nextX >= rightLimit) {
             nextX = rightLimit;
             nextDir = -1;
-            // Ocasionalmente trepar por la pared derecha
             if (Math.random() < 0.5) nextState = "climb";
           } else if (nextX <= leftLimit) {
             nextX = leftLimit;
@@ -217,35 +244,19 @@ function VirtualShimeji() {
     return () => clearInterval(physicsInterval);
   }, [state, direction, isDragging]);
 
-  // Eventos de arrastre con el mouse (Drag & Drop con animación de colgado)
+  // Al hacer clic para tomarlo con el cursor
   const handlePointerDown = (e: PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(true);
     setState("drag");
+    const rect = e.currentTarget.getBoundingClientRect();
     dragOffsetRef.current = {
-      x: e.clientX - pos.x,
-      y: e.clientY - pos.y,
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
     };
-
-    const handlePointerMove = (moveEvent: globalThis.PointerEvent) => {
-      setPos({
-        x: moveEvent.clientX - dragOffsetRef.current.x,
-        y: moveEvent.clientY - dragOffsetRef.current.y,
-      });
-    };
-
-    const handlePointerUp = () => {
-      setIsDragging(false);
-      setState("fall"); // Al soltarlo cae por gravedad
-      window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointerup", handlePointerUp);
-    };
-
-    window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", handlePointerUp);
   };
 
-  // Reacción al hacerle clic (elige aleatoriamente entre click1 y click2)
+  // Reacción al hacer clic rápido (elige entre click1 y click2)
   const handleClick = () => {
     if (isDragging) return;
     const randomAnim = Math.random() < 0.5 ? "click1" : "click2";
@@ -269,7 +280,7 @@ function VirtualShimeji() {
         userSelect: 'none',
         cursor: isDragging ? 'grabbing' : 'grab',
         transform: direction === -1 && state !== "drag" ? 'scaleX(-1)' : 'scaleX(1)',
-        transition: isDragging ? 'none' : 'transform 0.1s',
+        touchAction: 'none',
       }}
       title="¡Shimeji interactivo! Arrástrame o hazme clic"
     >
