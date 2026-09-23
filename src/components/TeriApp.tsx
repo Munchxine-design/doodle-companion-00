@@ -769,7 +769,7 @@ function Community({ adminMode }: { adminMode: boolean }) {
       id: Date.now().toString(),
       content: comment.trim(),
       author: finalAuthor,
-      approved: adminMode ? true : false,
+      approved: true, // Si es admin, se aprueba automáticamente
       is_admin_reply: adminMode ? true : false,
       parent_id: null,
       created_at: new Date().toISOString(),
@@ -1344,6 +1344,7 @@ function Contact() {
 export function TeriApp() {
   const [page, setPageState] = useState<Page>("inicio");
   const [adminLoginOpen, setAdminLoginOpen] = useState(false);
+  const [adminPanelOpen, setAdminPanelOpen] = useState(false);
   const [adminMode, setAdminMode] = useState(() => localStorage.getItem("site_admin_logged") === "true");
   const [effectMode, setEffectMode] = useState<"normal" | "bubbles" | "cyber" | "kiss">("normal");
 
@@ -1351,7 +1352,7 @@ export function TeriApp() {
 
   const handleAdminAccess = () => {
     if (adminMode) {
-      setAdminMode(true);
+      setAdminPanelOpen(true);
     } else {
       setAdminLoginOpen(true);
     }
@@ -1360,6 +1361,7 @@ export function TeriApp() {
   const handleLogoutAdmin = () => {
     localStorage.removeItem("site_admin_logged");
     setAdminMode(false);
+    setAdminPanelOpen(false);
   };
 
   return (
@@ -1408,7 +1410,7 @@ export function TeriApp() {
       )}
 
       <Header page={page} setPage={setPage} onAdminAccess={handleAdminAccess} />
-      {adminMode && <AdminPanel onClose={() => setAdminMode(false)} onLogout={handleLogoutAdmin} />}
+      {adminPanelOpen && <AdminPanel onClose={() => setAdminPanelOpen(false)} onLogout={handleLogoutAdmin} />}
       {page === "inicio" && <Home setPage={setPage} />}
       {page === "portafolio" && <Portfolio />}
       {page === "comunidad" && <Community adminMode={adminMode} />}
@@ -1425,9 +1427,9 @@ export function TeriApp() {
           localStorage.setItem("site_admin_logged", "true");
           setAdminMode(true);
           setAdminLoginOpen(false);
+          setAdminPanelOpen(true);
         }}
       />
     </div>
   );
 }
-            
