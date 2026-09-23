@@ -62,66 +62,6 @@ export type Database = {
         }
         Relationships: []
       }
-      wall_comments: {
-        Row: {
-          id: string
-          author: string
-          content: string
-          approved: boolean
-          parent_id: string | null
-          is_admin_reply: boolean
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          author?: string
-          content: string
-          approved?: boolean
-          parent_id?: string | null
-          is_admin_reply?: boolean
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          author?: string
-          content?: string
-          approved?: boolean
-          parent_id?: string | null
-          is_admin_reply?: boolean
-          created_at?: string
-        }
-        Relationships: []
-      }
-      wall_comments: {
-        Row: {
-          id: string
-          author: string
-          content: string
-          approved: boolean
-          parent_id: string | null
-          is_admin_reply: boolean
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          author?: string
-          content: string
-          approved?: boolean
-          parent_id?: string | null
-          is_admin_reply?: boolean
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          author?: string
-          content?: string
-          approved?: boolean
-          parent_id?: string | null
-          is_admin_reply?: boolean
-          created_at?: string
-        }
-        Relationships: []
-      }
     }
     Views: {
       [_ in never]: never
