@@ -137,6 +137,77 @@ button { color: inherit; }
 .system-footer { position: fixed; z-index: 60; left: 0; right: 0; bottom: 0; height: 34px; padding: 0 14px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); background: color-mix(in oklab, var(--background) 92%, transparent); backdrop-filter: blur(12px); font: 8px var(--font-mono); }.system-footer div { display: flex; align-items: center; gap: 5px; }
 .station-dialog { border-color: var(--border); background: var(--background); color: var(--foreground); border-radius: var(--radius); box-shadow: 0 0 60px var(--glow-mid); }
 
+/* Editable color presets */
+.color-swatch { position: relative; }
+.swatch-remove { position: absolute; top: -4px; right: -4px; width: 14px; height: 14px; display: none; align-items: center; justify-content: center; border-radius: 50%; background: var(--destructive); color: var(--destructive-foreground); cursor: pointer; z-index: 2; }
+.color-swatch:hover .swatch-remove { display: flex; }
+.color-add { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border: 2px dashed var(--border); border-radius: 4px; background: none; color: var(--muted-foreground); cursor: pointer; transition: border-color .15s, color .15s; padding: 0; }
+.color-add:hover { border-color: var(--primary); color: var(--primary); }
+
+/* Comment wall */
+.comment-text { margin: 10px 0 0; font-size: 13px; line-height: 1.5; word-break: break-word; }
+.comment-text img, .reply .comment-text img { display: inline-block; width: 20px; height: 20px; vertical-align: middle; }
+.comment-emoji { display: inline-block !important; width: 20px; height: 20px; vertical-align: middle; }
+.comment-actions { display: flex; gap: 12px; margin-top: 8px; }
+.comment-action-btn { display: flex; align-items: center; gap: 5px; border: 0; background: none; color: var(--muted-foreground); font: 9px var(--font-mono); cursor: pointer; padding: 0; transition: color .15s; }
+.comment-action-btn:hover { color: var(--primary); }
+.comment-avatar-fallback { display: inline-block; width: 44px; height: 44px; border-radius: 50%; background: var(--secondary); border: 1px solid var(--border); }
+.replies { margin-top: 12px; padding-left: 20px; border-left: 2px solid var(--border); display: grid; gap: 10px; }
+.reply { padding: 12px; border: 1px solid var(--border); background: color-mix(in oklab, var(--background) 50%, transparent); }
+.reply .post-author img, .reply .comment-avatar-fallback { width: 32px; height: 32px; }
+.reply-input { margin-top: 12px; display: grid; gap: 8px; }
+.comment-input-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
+.wall > .comment-input-row { width: calc(100% - 36px); }
+
+/* Emoji picker */
+.emoji-picker-wrapper { position: relative; }
+.emoji-picker { position: absolute; bottom: 100%; left: 0; margin-bottom: 6px; display: flex; flex-wrap: wrap; gap: 6px; padding: 10px; border: 1px solid var(--border); background: var(--popover); box-shadow: 0 8px 30px var(--deepest); z-index: 20; max-width: 240px; }
+.emoji-option { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border); background: var(--glow-soft); cursor: pointer; padding: 2px; transition: transform .15s, border-color .15s; }
+.emoji-option:hover { transform: scale(1.1); border-color: var(--primary); }
+.emoji-option img { width: 100%; height: 100%; object-fit: contain; }
+
+/* Admin panel tabs */
+.admin-tabs-wrapper { max-width: 1200px; margin: 0 auto; }
+.admin-tabs-list { display: flex; flex-wrap: wrap; gap: 4px; background: var(--card); border: 1px solid var(--border); padding: 4px; }
+.admin-section { max-width: 800px; margin: 0 auto; }
+.admin-section-title { display: flex; align-items: center; gap: 8px; font: 600 14px var(--font-display); color: var(--accent-foreground); margin: 0 0 20px; }
+.admin-empty { color: var(--muted-foreground); font-size: 13px; text-align: center; padding: 40px; }
+
+/* Admin profile tab */
+.admin-profile-edit { display: grid; grid-template-columns: 160px 1fr; gap: 32px; align-items: start; }
+.admin-avatar-preview { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.admin-avatar-preview img { width: 140px; height: 140px; object-fit: cover; border: 2px solid var(--border); border-radius: var(--radius); image-rendering: pixelated; }
+.admin-profile-form { display: grid; gap: 10px; }
+.admin-label { font: 9px var(--font-mono); color: var(--muted-foreground); letter-spacing: .1em; text-transform: uppercase; }
+.admin-hint { font-size: 11px; color: var(--muted-foreground); }
+
+/* Admin image management */
+.admin-upload-btn { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid var(--border); background: var(--glow-soft); font: 10px var(--font-mono); color: var(--primary); cursor: pointer; transition: background .2s; }
+.admin-upload-btn:hover { background: var(--glow-mid); }
+.admin-images-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
+.admin-image-card { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px; border: 1px solid var(--border); background: var(--card); }
+.admin-image-card img { width: 100%; aspect-ratio: 1; object-fit: cover; border: 1px solid var(--border); image-rendering: pixelated; }
+.admin-image-card span { font: 10px var(--font-mono); color: var(--muted-foreground); }
+
+/* Admin portfolio management */
+.admin-portfolio-add { display: flex; gap: 10px; margin-bottom: 20px; }
+.admin-portfolio-add input { flex: 1; }
+.admin-portfolio-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; }
+.admin-portfolio-item { display: flex; flex-direction: column; gap: 6px; padding: 10px; border: 1px solid var(--border); background: var(--card); }
+.admin-portfolio-item img { width: 100%; aspect-ratio: 4/5; object-fit: contain; background: var(--deepest); image-rendering: pixelated; }
+.admin-portfolio-item span { font: 10px var(--font-mono); color: var(--accent-foreground); }
+.admin-remove-btn { display: flex; align-items: center; gap: 4px; padding: 4px 8px; border: 1px solid var(--destructive); background: color-mix(in oklab, var(--destructive) 12%, transparent); color: var(--destructive-foreground); font: 9px var(--font-mono); cursor: pointer; transition: background .2s; }
+.admin-remove-btn:hover { background: color-mix(in oklab, var(--destructive) 25%, transparent); }
+
+/* Admin emoji management */
+.admin-emoji-add { display: flex; gap: 10px; margin-bottom: 20px; }
+.admin-emoji-add input { flex: 1; }
+.admin-emoji-grid { display: flex; flex-wrap: wrap; gap: 14px; }
+.admin-emoji-item { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px; border: 1px solid var(--border); background: var(--card); position: relative; }
+.admin-emoji-item img { width: 48px; height: 48px; object-fit: contain; }
+.admin-emoji-item span { font: 9px var(--font-mono); color: var(--muted-foreground); }
+.admin-emoji-item .admin-remove-btn { position: absolute; top: 4px; right: 4px; padding: 2px 4px; }
+
 @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
 @keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(7px); } }
 @keyframes scanline { from { top: 0; } to { top: 100vh; } }
