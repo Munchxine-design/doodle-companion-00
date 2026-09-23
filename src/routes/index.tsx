@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { TeriApp } from "@/components/TeriApp";
+import { MaxineApp } from "@/components/MaxineApp";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -16,5 +16,5 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  return <TeriApp />;
+  return <MaxineApp/>;
 }
