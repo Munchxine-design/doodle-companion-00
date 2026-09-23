@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent, type ChangeEvent } from "react";
 import { Brush, Check, ChevronDown, Coffee, CornerDownRight, Eraser, Eye, Folder, Image as ImageIcon, LockKeyhole, Menu, MessageCircle, Minus, Orbit, Paintbrush, Play, RotateCcw, Send, Smile, Sparkles, Square, Trash2, X, Music, LogOut, Terminal, Type, MousePointer2, Plus, Calendar, Kanban, Inbox } from "lucide-react";
-import avatarAsset from "@/assets/teridayo-avatar.png.asset.json";
+import avatarAsset from "@/assets/maxine-avatar.png.asset.json";
 import orcaAsset from "@/assets/orca-credential.jpg.asset.json";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -57,7 +57,7 @@ const nav: Array<{ id: Page; label: string }> = [
   { id: "contacto", label: "Contacto" },
 ];
 
-const ADMIN_PASSWORD = "teri123"; // Puedes cambiarla cuando quieras
+const ADMIN_PASSWORD = "maxine123"; // Puedes cambiarla cuando quieras
 
 const getStoredProfile = () => JSON.parse(localStorage.getItem("site_profile") || JSON.stringify({ name: "Maxine", avatar: avatarAsset.url }));
 const getStoredImagesConfig = () => JSON.parse(localStorage.getItem("site_images_config") || JSON.stringify({ homeProfile: avatarAsset.url, homeDirects: avatarAsset.url, homeIntro: avatarAsset.url, aboutMain: avatarAsset.url, credential: orcaAsset.url }));
@@ -645,7 +645,7 @@ export function MaxineApp() {
       <Dialog open={adminLoginOpen} onOpenChange={setAdminLoginOpen}>
         <DialogContent className="station-dialog">
           <DialogHeader><DialogTitle>admin_login.exe</DialogTitle></DialogHeader>
-          <Input type="password" placeholder="Contraseña (teri123)" onKeyDown={(e) => { if (e.key === "Enter" && e.currentTarget.value === ADMIN_PASSWORD) { localStorage.setItem("site_admin_logged", "true"); setAdminMode(true); setAdminLoginOpen(false); setAdminPanelOpen(true); } }} />
+          <Input type="password" placeholder="Contraseña (maxine123)" onKeyDown={(e) => { if (e.key === "Enter" && e.currentTarget.value === ADMIN_PASSWORD) { localStorage.setItem("site_admin_logged", "true"); setAdminMode(true); setAdminLoginOpen(false); setAdminPanelOpen(true); } }} />
         </DialogContent>
       </Dialog>
     </div>
