@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent, type ChangeEvent } from "react";
-import { Brush, Check, ChevronDown, Coffee, CornerDownRight, Eraser, Eye, Folder, Image as ImageIcon, LockKeyhole, Menu, MessageCircle, Minus, Orbit, Paintbrush, Play, Pause, RotateCcw, Send, Smile, Sparkles, Square, Trash2, X, Music, LogOut } from "lucide-react";
+import { Brush, Check, ChevronDown, Coffee, CornerDownRight, Eraser, Eye, Folder, Image as ImageIcon, LockKeyhole, Menu, MessageCircle, Minus, Orbit, Paintbrush, Play, RotateCcw, Send, Smile, Sparkles, Square, Trash2, X, Music, LogOut } from "lucide-react";
 import avatarAsset from "@/assets/teridayo-avatar.png.asset.json";
 import orcaAsset from "@/assets/orca-credential.jpg.asset.json";
 import { Button } from "@/components/ui/button";
@@ -95,15 +95,29 @@ const getStoredSpotify = () => {
   return localStorage.getItem("site_spotify_url") || "";
 };
 
-const getStoredShimeji = () => {
-  return localStorage.getItem("site_shimeji_img") || avatarAsset.url;
+const getStoredShimejiFrames = (): string[] => {
+  const saved = localStorage.getItem("site_shimeji_frames");
+  if (saved) {
+    try { return JSON.parse(saved); } catch { /* fallback */ }
+  }
+  return [avatarAsset.url];
 };
 
-// --- COMPONENTE SHIMEJI ---
+// --- COMPONENTE SHIMEJI CON ANIMACIÓN DE FRAMES ---
 function VirtualShimeji() {
-  const [pos, setPos] = useState({ x: 50, y: window.innerHeight - 100 });
+  const [pos, setPos] = useState({ x: 80, y: window.innerHeight - 110 });
+  const [frameIndex, setFrameIndex] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
-  const shimejiImg = getStoredShimeji();
+  const frames = getStoredShimejiFrames();
+
+  // Bucle de animación estilo Shimeji
+  useEffect(() => {
+    if (frames.length <= 1) return;
+    const interval = setInterval(() => {
+      setFrameIndex((prev) => (prev + 1) % frames.length);
+    }, 250);
+    return () => clearInterval(interval);
+  }, [frames.length]);
 
   useEffect(() => {
     const handleMove = (e: MouseEvent) => {
@@ -130,17 +144,17 @@ function VirtualShimeji() {
         top: `${pos.y}px`,
         zIndex: 9998,
         cursor: 'grab',
-        width: '60px',
-        height: '60px',
+        width: '64px',
+        height: '64px',
         userSelect: 'none',
         pointerEvents: 'auto',
       }}
       onMouseDown={() => setIsDragging(true)}
-      title="¡Mascota Shimeji! Arrástrame"
+      title="¡Mascota Shimeji animada! Arrástrame"
     >
       <img 
-        src={shimejiImg} 
-        alt="Shimeji" 
+        src={frames[frameIndex] || frames[0]} 
+        alt="Shimeji Animado" 
         style={{ width: '100%', height: '100%', objectFit: 'contain', filter: 'drop-shadow(2px 4px 6px rgba(0,0,0,0.5))', pointerEvents: 'none' }} 
       />
     </div>
@@ -653,12 +667,12 @@ function Community({ adminMode }: { adminMode: boolean }) {
 
   const sendComment = () => {
     if (!comment.trim()) return;
-    const finalAuthor = adminMode ? (author.trim() || profile.name) : "Anónimo";
+    const finalAuthor = adminMode ? (author.trim() || profile.name) : (author.trim() || "Anónimo");
     const newC: WallComment = {
       id: Date.now().toString(),
       content: comment.trim(),
       author: finalAuthor,
-      approved: adminMode,
+      approved: adminMode, // Si es admin se aprueba solo, si es usuario queda pendiente o visible según prefieras
       is_admin_reply: false,
       parent_id: null,
       created_at: new Date().toISOString(),
@@ -667,6 +681,7 @@ function Community({ adminMode }: { adminMode: boolean }) {
     setComments(updated);
     localStorage.setItem("local_comments", JSON.stringify(updated));
     setComment("");
+    setAuthor("");
   };
 
   const sendReply = (parentId: string, content: string, isAdmin: boolean) => {
@@ -691,22 +706,9 @@ function Community({ adminMode }: { adminMode: boolean }) {
     localStorage.setItem("local_comments", JSON.stringify(updated));
   };
 
+  // Mostrar comentarios aprobados o todos si estamos en modo admin
   const topLevel = comments.filter((c) => !c.parent_id && (c.approved || adminMode));
   const getReplies = (parentId: string) => comments.filter((c) => c.parent_id === parentId);
-
-  const renderFormattedContent = (text: string) => {
-    const parts = text.split(/(\[emoji:[^\]]+\])/g);
-    return parts.map((part, i) => {
-      if (part.startsWith("[emoji:") && part.endsWith("]")) {
-        const emojiName = part.slice(7, -1);
-        const found = customEmojis.find((e: { name: string; url: string }) => e.name === emojiName);
-        if (found) {
-          return <img key={i} src={found.url} alt={emojiName} width={18} height={18} style={{ display: 'inline-block', verticalAlign: 'middle', margin: '0 2px' }} />;
-        }
-      }
-      return part;
-    });
-  };
 
   return (
     <main className="page-shell">
@@ -737,23 +739,23 @@ function Community({ adminMode }: { adminMode: boolean }) {
               onDelete={deleteComment}
             />
           ))}
-          {adminMode && (
-            <Input className="comment-author-input" placeholder="Tu nombre de usuario (admin)..." value={author} onChange={(e) => setAuthor(e.target.value)} />
-          )}
-          <div className="emoji-row">
-            <button className="emoji-toggle" onClick={() => setShowEmojiPicker(!showEmojiPicker)}><Smile size={16} /> Emojis personalizados</button>
-            {showEmojiPicker && (
-              <div className="emoji-picker" style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', background: '#0a192f', padding: '8px', borderRadius: '6px' }}>
-                {customEmojis.map((emoji: { name: string; url: string }, idx: number) => (
-                  <button key={idx} className="emoji-btn" onClick={() => setComment(comment + ` [emoji:${emoji.name}] `)} style={{ background: 'transparent', border: '1px solid #1e3a8a', borderRadius: '4px', cursor: 'pointer', padding: '4px' }}>
-                    <img src={emoji.url} alt={emoji.name} width={20} height={20} style={{ objectFit: 'contain' }} />
-                  </button>
-                ))}
-              </div>
-            )}
+          <div style={{ marginTop: '15px' }}>
+            <Input className="comment-author-input" placeholder={adminMode ? "Tu nombre de usuario (admin)..." : "Tu nombre..."} value={author} onChange={(e) => setAuthor(e.target.value)} style={{ marginBottom: '8px' }} />
+            <div className="emoji-row" style={{ marginBottom: '8px' }}>
+              <button className="emoji-toggle" onClick={() => setShowEmojiPicker(!showEmojiPicker)}><Smile size={16} /> Emojis personalizados</button>
+              {showEmojiPicker && (
+                <div className="emoji-picker" style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', background: '#0a192f', padding: '8px', borderRadius: '6px', marginTop: '5px' }}>
+                  {customEmojis.map((emoji: { name: string; url: string }, idx: number) => (
+                    <button key={idx} className="emoji-btn" onClick={() => setComment(comment + ` [emoji:${emoji.name}] `)} style={{ background: 'transparent', border: '1px solid #1e3a8a', borderRadius: '4px', cursor: 'pointer', padding: '4px' }}>
+                      <img src={emoji.url} alt={emoji.name} width={20} height={20} style={{ objectFit: 'contain' }} />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <Textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Tu comentario..." />
+            <Button variant="signal" onClick={sendComment} disabled={!comment.trim()} style={{ marginTop: '8px' }}><MessageCircle /> Enviar comentario</Button>
           </div>
-          <Textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder={adminMode ? "Escribe como admin..." : "Tu comentario anónimo..."} />
-          <Button variant="signal" onClick={sendComment} disabled={!comment.trim()}><MessageCircle /> {adminMode ? "Publicar como admin" : "Enviar"}</Button>
         </Window>
         <div className="community-side">
           <Window title="Bocetos y rayones">
@@ -762,7 +764,7 @@ function Community({ adminMode }: { adminMode: boolean }) {
           </Window>
           <PaintCanvas />
           <Window title="Notita">
-            <p className="window-copy">Los dibujos y comentarios aparecen cuando Maxine los aprueba.</p>
+            <p className="window-copy">Los dibujos aparecen cuando Maxine los aprueba.</p>
           </Window>
         </div>
       </div>
@@ -787,7 +789,7 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
   const [newArtImage, setNewArtImage] = useState("");
 
   const [spotifyUrl, setSpotifyUrl] = useState(getStoredSpotify());
-  const [shimejiImg, setShimejiImg] = useState(getStoredShimeji());
+  const [shimejiStatus, setShimejiStatus] = useState("Mascota configurada con éxito");
 
   const [todos, setTodos] = useState<{ id: string; text: string; done: boolean }[]>(() => JSON.parse(localStorage.getItem("admin_todos") || "[]"));
   const [newTodoText, setNewTodoText] = useState("");
@@ -879,7 +881,7 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
         <Button variant={activeTab === "imagenes" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("imagenes")}>Imágenes del sitio</Button>
         <Button variant={activeTab === "emojis" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("emojis")}>Emojis imagen</Button>
         <Button variant={activeTab === "musica" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("musica")}>Música</Button>
-        <Button variant={activeTab === "shimeji" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("shimeji")}>Mascota Shimeji</Button>
+        <Button variant={activeTab === "shimeji" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("shimeji")}>Mascota Shimeji ZIP</Button>
         <Button variant={activeTab === "organizador" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("organizador")}>Organizador</Button>
       </div>
 
@@ -1050,26 +1052,33 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
 
       {activeTab === "shimeji" && (
         <div style={{ padding: '20px', background: '#0f203b', borderRadius: '8px', border: '1px solid #1e3a8a' }}>
-          <h3 style={{ marginBottom: '15px' }}>Mascota Virtual (Shimeji)</h3>
-          <p style={{ color: '#8892b0', fontSize: '13px', marginBottom: '15px' }}>Sube la imagen PNG de tu personaje:</p>
-          <img src={shimejiImg} alt="Shimeji preview" width={80} height={80} style={{ objectFit: 'contain', background: '#0a192f', borderRadius: '8px', padding: '5px', marginBottom: '10px', border: '1px solid #1e3a8a' }} />
-          <label className="upload-button" style={{ background: '#1e3a8a', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', display: 'inline-block', marginBottom: '15px' }}>
-            <ImageIcon size={14} /> Seleccionar imagen PNG
-            <input type="file" accept="image/*" onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (!file) return;
-              const reader = new FileReader();
-              reader.onload = (ev) => {
-                if (ev.target?.result) {
-                  const b64 = ev.target.result as string;
-                  setShimejiImg(b64);
-                  localStorage.setItem("site_shimeji_img", b64);
-                  alert("¡Mascota Shimeji actualizada!");
-                }
-              };
-              reader.readAsDataURL(file);
+          <h3 style={{ marginBottom: '15px' }}>Mascota Virtual Animada (Shimeji ZIP)</h3>
+          <p style={{ color: '#8892b0', fontSize: '13px', marginBottom: '15px' }}>Sube múltiples imágenes PNG (frames de animación) o un archivo comprimido de frames para tu Shimeji:</p>
+          <label className="upload-button" style={{ background: '#1e3a8a', padding: '10px 15px', borderRadius: '6px', cursor: 'pointer', display: 'inline-block', marginBottom: '15px' }}>
+            <ImageIcon size={16} /> Subir frames de animación (PNG múltiple)
+            <input type="file" accept="image/*" multiple onChange={(e) => {
+              const files = e.target.files;
+              if (!files || files.length === 0) return;
+              const loadedFrames: string[] = [];
+              let processed = 0;
+              Array.from(files).forEach((file) => {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                  if (ev.target?.result) {
+                    loadedFrames.push(ev.target.result as string);
+                  }
+                  processed++;
+                  if (processed === files.length) {
+                    localStorage.setItem("site_shimeji_frames", JSON.stringify(loadedFrames));
+                    setShimejiStatus(`¡${loadedFrames.length} frames cargados para el Shimeji!`);
+                    alert(`¡Shimeji animado configurado con ${loadedFrames.length} fotogramas!`);
+                  }
+                };
+                reader.readAsDataURL(file);
+              });
             }} style={{ display: 'none' }} />
           </label>
+          <p style={{ color: '#4ade80', fontSize: '12px' }}>{shimejiStatus}</p>
         </div>
       )}
 
