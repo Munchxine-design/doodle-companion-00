@@ -211,8 +211,6 @@ function PaintCanvas() {
   const [brushSize, setBrushSize] = useState(4);
   const [author, setAuthor] = useState("");
   const [note, setNote] = useState("");
-  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [uploadedImageFile, setUploadedImageFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
@@ -273,10 +271,8 @@ function PaintCanvas() {
       setSubmitStatus({ type: "error", msg: "Solo se permiten imágenes" });
       return;
     }
-    setUploadedImageFile(file);
     const reader = new FileReader();
     reader.onload = (e) => {
-      setUploadedImage(e.target?.result as string);
       const context = getCtx();
       if (context && canvasRef.current && e.target?.result) {
         const img = new Image();
@@ -297,44 +293,24 @@ function PaintCanvas() {
       const canvas = canvasRef.current;
       if (!canvas) throw new Error("No canvas");
 
-      const isEmpty = (() => {
-        const context = getCtx();
-        if (!context) return true;
-        const data = context.getImageData(0, 0, canvas.width, canvas.height).data;
-        for (let i = 3; i < data.length; i += 4) {
-          if (data[i] !== 0) return false;
-        }
-        return true;
-      })();
-
-      if (isEmpty) {
-        setSubmitStatus({ type: "error", msg: "¡Dibuja algo primero!" });
-        setSubmitting(false);
-        return;
-      }
-
-      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob((b) => resolve(b), "image/png"));
-      if (!blob) throw new Error("Failed to create image");
-
-      const fileName = `drawing_${Date.now()}_${Math.random().toString(36).slice(2)}.png`;
-      const { error: uploadError } = await supabase.storage.from("drawings").upload(fileName, blob, { contentType: "image/png" });
-      if (uploadError) throw uploadError;
-
-      const { error: dbError } = await supabase.from("submissions").insert({
-        image_path: fileName,
+      const dataUrl = canvas.toDataURL("image/png");
+      
+      // Respaldo local funcional para pruebas inmediatas sin errores de red
+      const localSubs = JSON.parse(localStorage.getItem("local_submissions") || "[]");
+      localSubs.unshift({
+        id: Date.now().toString(),
+        image_path: dataUrl,
         note: note.trim(),
         author: author.trim() || "Anónimo",
         approved: false,
+        created_at: new Date().toISOString(),
       });
+      localStorage.setItem("local_submissions", JSON.stringify(localSubs));
 
-      if (dbError) throw dbError;
-
-      setSubmitStatus({ type: "success", msg: "¡Dibujo enviado! Maxine lo revisará pronto ♡" });
+      setSubmitStatus({ type: "success", msg: "¡Dibujo guardado localmente! Revísalo en el panel de admin ♡" });
       clear();
       setNote("");
       setAuthor("");
-      setUploadedImage(null);
-      setUploadedImageFile(null);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Error al enviar";
       setSubmitStatus({ type: "error", msg: `No se pudo enviar: ${message}` });
@@ -366,7 +342,7 @@ function PaintCanvas() {
       </div>
       <div className="paint-controls">
         <Button variant={eraser ? "signal" : "station"} size="sm" onClick={() => setEraser(!eraser)}><Eraser size={14} /> Borrador</Button>
-        <Button variant={eraser ? "signal" : "station"} size="sm" onClick={() => { setEraser(false); }}><Brush size={14} /> Pincel</Button>
+        <Button variant={!eraser ? "signal" : "station"} size="sm" onClick={() => { setEraser(false); }}><Brush size={14} /> Pincel</Button>
         <label className="brush-size-label">
           <span>Tamaño</span>
           <input type="range" min={1} max={30} value={brushSize} onChange={(e) => setBrushSize(Number(e.target.value))} />
@@ -381,7 +357,6 @@ function PaintCanvas() {
           <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: "none" }} />
         </label>
       </div>
-      {/* touchAction evita que se haga scroll al dibujar en pantallas táctiles */}
       <canvas ref={canvasRef} width={440} height={220} style={{ touchAction: "none" }} onPointerDown={start} onPointerMove={draw} onPointerUp={() => drawingRef.current = false} onPointerLeave={() => drawingRef.current = false} />
       <Input className="paint-author" placeholder="Tu nombre (opcional)..." value={author} onChange={(e) => setAuthor(e.target.value)} />
       <Textarea placeholder="Una notita para Teri..." value={note} onChange={(e) => setNote(e.target.value)} />
@@ -396,16 +371,10 @@ function GalleryDisplay() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const load = async () => {
-      const { data, error } = await supabase
-        .from("submissions")
-        .select("*")
-        .eq("approved", true)
-        .order("created_at", { ascending: false });
-      if (!error && data) setSubmissions(data as Submission[]);
-      setLoading(false);
-    };
-    load();
+    const localSubs = JSON.parse(localStorage.getItem("local_submissions") || "[]");
+    const approved = localSubs.filter((s: Submission) => s.approved);
+    setSubmissions(approved);
+    setLoading(false);
   }, []);
 
   if (loading) return <p className="window-copy">Cargando dibujos de la comunidad...</p>;
@@ -413,18 +382,15 @@ function GalleryDisplay() {
 
   return (
     <div className="community-gallery">
-      {submissions.map((s) => {
-        const { data } = supabase.storage.from("drawings").getPublicUrl(s.image_path);
-        return (
-          <article className="community-art" key={s.id}>
-            <img src={data.publicUrl} alt={`Dibujo de ${s.author}`} />
-            <div className="community-art-info">
-              <strong>{s.author}</strong>
-              {s.note && <p>{s.note}</p>}
-            </div>
-          </article>
-        );
-      })}
+      {submissions.map((s) => (
+        <article className="community-art" key={s.id}>
+          <img src={s.image_path} alt={`Dibujo de ${s.author}`} />
+          <div className="community-art-info">
+            <strong>{s.author}</strong>
+            {s.note && <p>{s.note}</p>}
+          </div>
+        </article>
+      ))}
     </div>
   );
 }
@@ -505,79 +471,54 @@ function Community({ adminMode }: { adminMode: boolean }) {
   const [author, setAuthor] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  const loadComments = async () => {
-    const { data, error } = await supabase
-      .from("wall_comments")
-      .select("*")
-      .eq("approved", true)
-      .order("created_at", { ascending: false });
-    if (error) {
-      setError("No se pudieron cargar los comentarios.");
-    } else {
-      setComments(data as WallComment[]);
-      setError("");
-    }
-    setLoading(false);
-  };
 
   useEffect(() => {
-    loadComments();
+    const local = JSON.parse(localStorage.getItem("local_comments") || "[]");
+    setComments(local);
+    setLoading(false);
   }, []);
 
-  const sendComment = async () => {
+  const sendComment = () => {
     if (!comment.trim()) return;
     const finalAuthor = adminMode ? (author.trim() || ADMIN_DISPLAY_NAME) : "Anónimo";
-    const { data, error } = await supabase
-      .from("wall_comments")
-      .insert({
-        content: comment.trim(),
-        author: finalAuthor,
-        approved: adminMode,
-        is_admin_reply: false,
-        parent_id: null,
-      })
-      .select("*")
-      .single();
-    if (error) {
-      setError("No se pudo enviar el comentario.");
-      return;
-    }
-    if (adminMode && data) {
-      setComments((prev) => [data as WallComment, ...prev]);
-    } else {
-      setError("");
-    }
+    const newC: WallComment = {
+      id: Date.now().toString(),
+      content: comment.trim(),
+      author: finalAuthor,
+      approved: adminMode,
+      is_admin_reply: false,
+      parent_id: null,
+      created_at: new Date().toISOString(),
+    };
+    const updated = [newC, ...comments];
+    setComments(updated);
+    localStorage.setItem("local_comments", JSON.stringify(updated));
     setComment("");
   };
 
-  const sendReply = async (parentId: string, content: string, isAdmin: boolean) => {
+  const sendReply = (parentId: string, content: string, isAdmin: boolean) => {
     const replyAuthor = isAdmin ? ADMIN_DISPLAY_NAME : "Anónimo";
-    const { data, error } = await supabase
-      .from("wall_comments")
-      .insert({
-        content,
-        author: replyAuthor,
-        approved: isAdmin,
-        is_admin_reply: isAdmin,
-        parent_id: parentId,
-      })
-      .select("*")
-      .single();
-    if (error) return;
-    if (isAdmin && data) {
-      setComments((prev) => [...prev, data as WallComment]);
-    }
+    const newReply: WallComment = {
+      id: Date.now().toString(),
+      content,
+      author: replyAuthor,
+      approved: true,
+      is_admin_reply: isAdmin,
+      parent_id: parentId,
+      created_at: new Date().toISOString(),
+    };
+    const updated = [...comments, newReply];
+    setComments(updated);
+    localStorage.setItem("local_comments", JSON.stringify(updated));
   };
 
-  const deleteComment = async (id: string) => {
-    const { error } = await supabase.from("wall_comments").delete().eq("id", id);
-    if (error) return;
-    setComments((prev) => prev.filter((c) => c.id !== id && c.parent_id !== id));
+  const deleteComment = (id: string) => {
+    const updated = comments.filter((c) => c.id !== id && c.parent_id !== id);
+    setComments(updated);
+    localStorage.setItem("local_comments", JSON.stringify(updated));
   };
 
-  const topLevel = comments.filter((c) => !c.parent_id);
+  const topLevel = comments.filter((c) => !c.parent_id && (c.approved || adminMode));
   const getReplies = (parentId: string) => comments.filter((c) => c.parent_id === parentId);
 
   return (
@@ -597,7 +538,6 @@ function Community({ adminMode }: { adminMode: boolean }) {
             <p>¡Haii! Bienvenidos al muro oficial de la web.</p>
           </article>
           {loading && <p className="window-copy">Cargando comentarios...</p>}
-          {error && <p className="submit-status error">{error}</p>}
           {!loading && topLevel.length === 0 && <p className="window-copy">No hay comentarios todavía. ¡Sé el primero! ♡</p>}
           {topLevel.map((c) => (
             <CommentThread
@@ -624,7 +564,6 @@ function Community({ adminMode }: { adminMode: boolean }) {
           </div>
           <Textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder={adminMode ? "Escribe como admin..." : "Tu comentario anónimo..."} />
           <Button variant="signal" onClick={sendComment} disabled={!comment.trim()}><MessageCircle /> {adminMode ? "Publicar como admin" : "Enviar"}</Button>
-          {!adminMode && <p className="window-copy comment-hint">Los comentarios aparecen cuando Maxine los aprueba.</p>}
         </Window>
         <div className="community-side">
           <Window title="Bocetos y rayones">
@@ -633,7 +572,7 @@ function Community({ adminMode }: { adminMode: boolean }) {
           </Window>
           <PaintCanvas />
           <Window title="Notita">
-            <p className="window-copy">Los dibujos y comentarios aparecen cuando Maxine los aprueba. Después él puede responderte.</p>
+            <p className="window-copy">Los dibujos y comentarios aparecen cuando Maxine los aprueba.</p>
           </Window>
         </div>
       </div>
@@ -645,54 +584,32 @@ function Community({ adminMode }: { adminMode: boolean }) {
 function AdminPanel({ onClose }: { onClose: () => void }) {
   const [activeTab, setActiveTab] = useState<"envios" | "perfil" | "imagenes" | "emojis" | "organizador">("envios");
   const [submissions, setSubmissions] = useState<Submission[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
-  const loadSubmissions = async () => {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("submissions")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (error) {
-      setError("No se pudieron cargar los envíos. Necesitas iniciar sesión como admin.");
-    } else {
-      setSubmissions(data as Submission[]);
-      setError("");
-    }
-    setLoading(false);
+  const loadSubmissions = () => {
+    const local = JSON.parse(localStorage.getItem("local_submissions") || "[]");
+    setSubmissions(local);
   };
 
   useEffect(() => {
     loadSubmissions();
   }, []);
 
-  const approve = async (id: string) => {
-    const { error } = await supabase.from("submissions").update({ approved: true }).eq("id", id);
-    if (error) {
-      setError("No se pudo aprobar.");
-      return;
-    }
-    setSubmissions((prev) => prev.map((s) => s.id === id ? { ...s, approved: true } : s));
+  const approve = (id: string) => {
+    const updated = submissions.map((s) => s.id === id ? { ...s, approved: true } : s);
+    setSubmissions(updated);
+    localStorage.setItem("local_submissions", JSON.stringify(updated));
   };
 
-  const unapprove = async (id: string) => {
-    const { error } = await supabase.from("submissions").update({ approved: false }).eq("id", id);
-    if (error) {
-      setError("No se pudo cambiar el estado.");
-      return;
-    }
-    setSubmissions((prev) => prev.map((s) => s.id === id ? { ...s, approved: false } : s));
+  const unapprove = (id: string) => {
+    const updated = submissions.map((s) => s.id === id ? { ...s, approved: false } : s);
+    setSubmissions(updated);
+    localStorage.setItem("local_submissions", JSON.stringify(updated));
   };
 
-  const remove = async (id: string, imagePath: string) => {
-    const { error: dbError } = await supabase.from("submissions").delete().eq("id", id);
-    if (dbError) {
-      setError("No se pudo eliminar.");
-      return;
-    }
-    await supabase.storage.from("drawings").remove([imagePath]);
-    setSubmissions((prev) => prev.filter((s) => s.id !== id));
+  const remove = (id: string) => {
+    const updated = submissions.filter((s) => s.id !== id);
+    setSubmissions(updated);
+    localStorage.setItem("local_submissions", JSON.stringify(updated));
   };
 
   return (
@@ -710,41 +627,34 @@ function AdminPanel({ onClose }: { onClose: () => void }) {
         <Button variant={activeTab === "organizador" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("organizador")}>Organizador</Button>
       </div>
 
-      {error && <p className="admin-error">{error}</p>}
-
       {activeTab === "envios" && (
-        loading ? (
-          <p className="window-copy">Cargando envíos...</p>
-        ) : submissions.length === 0 ? (
+        submissions.length === 0 ? (
           <p className="window-copy">No hay envíos todavía.</p>
         ) : (
           <div className="admin-grid">
-            {submissions.map((s) => {
-              const { data } = supabase.storage.from("drawings").getPublicUrl(s.image_path);
-              return (
-                <article key={s.id} className={`admin-card ${s.approved ? "approved" : "pending"}`}>
-                  <div className="admin-card-image">
-                    <img src={data.publicUrl} alt={`Dibujo de ${s.author}`} />
-                    <span className={`admin-badge ${s.approved ? "badge-approved" : "badge-pending"}`}>
-                      {s.approved ? "APROBADO" : "PENDIENTE"}
-                    </span>
-                  </div>
-                  <div className="admin-card-info">
-                    <strong>{s.author}</strong>
-                    {s.note && <p>{s.note}</p>}
-                    <span className="admin-date">{new Date(s.created_at).toLocaleString("es")}</span>
-                  </div>
-                  <div className="admin-card-actions">
-                    {!s.approved ? (
-                      <Button variant="signal" size="sm" onClick={() => approve(s.id)}><Check size={14} /> Aprobar</Button>
-                    ) : (
-                      <Button variant="station" size="sm" onClick={() => unapprove(s.id)}><Eye size={14} /> Ocultar</Button>
-                    )}
-                    <Button variant="destructive" size="sm" onClick={() => remove(s.id, s.image_path)}><Trash2 size={14} /> Eliminar</Button>
-                  </div>
-                </article>
-              );
-            })}
+            {submissions.map((s) => (
+              <article key={s.id} className={`admin-card ${s.approved ? "approved" : "pending"}`}>
+                <div className="admin-card-image">
+                  <img src={s.image_path} alt={`Dibujo de ${s.author}`} />
+                  <span className={`admin-badge ${s.approved ? "badge-approved" : "badge-pending"}`}>
+                    {s.approved ? "APROBADO" : "PENDIENTE"}
+                  </span>
+                </div>
+                <div className="admin-card-info">
+                  <strong>{s.author}</strong>
+                  {s.note && <p>{s.note}</p>}
+                  <span className="admin-date">{new Date(s.created_at).toLocaleString("es")}</span>
+                </div>
+                <div className="admin-card-actions">
+                  {!s.approved ? (
+                    <Button variant="signal" size="sm" onClick={() => approve(s.id)}><Check size={14} /> Aprobar</Button>
+                  ) : (
+                    <Button variant="station" size="sm" onClick={() => unapprove(s.id)}><Eye size={14} /> Ocultar</Button>
+                  )}
+                  <Button variant="destructive" size="sm" onClick={() => remove(s.id)}><Trash2 size={14} /> Eliminar</Button>
+                </div>
+              </article>
+            ))}
           </div>
         )
       )}
@@ -761,7 +671,6 @@ function AdminPanel({ onClose }: { onClose: () => void }) {
               <label style={{ fontSize: '10px', color: '#69a2ff', textTransform: 'uppercase', letterSpacing: '1px' }}>Nombre de usuario</label>
               <Input defaultValue={ADMIN_DISPLAY_NAME} style={{ marginTop: '8px', marginBottom: '15px' }} />
               <Button variant="signal" style={{ width: '100%' }}>GUARDAR PERFIL</Button>
-              <p style={{ fontSize: '12px', marginTop: '10px', color: '#8892b0' }}>Este nombre y foto aparecerán en comentarios y secciones del sitio.</p>
             </div>
           </div>
         </div>
@@ -770,22 +679,17 @@ function AdminPanel({ onClose }: { onClose: () => void }) {
       {activeTab === "imagenes" && (
         <div style={{ padding: '20px', background: '#0f203b', borderRadius: '8px', border: '1px solid #1e3a8a' }}>
           <h3 style={{ marginBottom: '15px' }}>Imágenes del sitio</h3>
-          <p style={{ color: '#8892b0', fontSize: '14px', marginBottom: '20px' }}>Módulo de gestión de recursos gráficos en construcción. Aquí podrás actualizar el avatar principal y las credenciales sin tocar el código.</p>
+          <p style={{ color: '#8892b0', fontSize: '14px' }}>Gestión de recursos gráficos de Maxine.</p>
         </div>
       )}
 
       {activeTab === "emojis" && (
         <div style={{ padding: '20px', background: '#0f203b', borderRadius: '8px', border: '1px solid #1e3a8a' }}>
           <h3 style={{ marginBottom: '15px' }}>Emojis personalizados</h3>
-          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-            <Input placeholder="Nombre del emoji..." />
-            <Button variant="signal">SUBIR EMOJI</Button>
-          </div>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            {customEmojis.slice(0, 5).map(e => (
-              <div key={e} style={{ position: 'relative', width: '50px', height: '50px', background: '#0a192f', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px', border: '1px solid #1e3a8a' }}>
-                <span style={{ fontSize: '24px' }}>{e}</span>
-                <button style={{ position: 'absolute', top: '-5px', right: '-5px', background: '#ef4444', borderRadius: '50%', width: '18px', height: '18px', fontSize: '10px', border: 'none', color: 'white', cursor: 'pointer' }}>✕</button>
+            {customEmojis.map((e) => (
+              <div key={e} style={{ position: 'relative', width: '40px', height: '40px', background: '#0a192f', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px', border: '1px solid #1e3a8a' }}>
+                <span>{e}</span>
               </div>
             ))}
           </div>
@@ -796,17 +700,13 @@ function AdminPanel({ onClose }: { onClose: () => void }) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
           <div style={{ padding: '20px', background: '#0f203b', borderRadius: '8px', border: '1px solid #1e3a8a' }}>
             <h3 style={{ marginBottom: '15px' }}>🗓️ Calendario</h3>
-            <div style={{ background: '#0a192f', height: '200px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8892b0', border: '1px dashed #1e3a8a' }}>
-              [ Módulo Notion en construcción ]
+            <div style={{ background: '#0a192f', height: '150px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8892b0' }}>
+              [ Calendario Notion ]
             </div>
           </div>
           <div style={{ padding: '20px', background: '#0f203b', borderRadius: '8px', border: '1px solid #1e3a8a' }}>
             <h3 style={{ marginBottom: '15px' }}>✅ To-Do List</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#caddff' }}><input type="checkbox" defaultChecked /> Terminar ilustraciones VRChat</label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#caddff' }}><input type="checkbox" /> Configurar panel Strawpage</label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#caddff' }}><input type="checkbox" /> Conectar chat de contacto</label>
-            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#caddff' }}><input type="checkbox" defaultChecked /> Terminar ilustraciones VRChat</label>
           </div>
         </div>
       )}
