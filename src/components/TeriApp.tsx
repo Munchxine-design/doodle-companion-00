@@ -1,27 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent, type ChangeEvent } from "react";
-import {
-  Brush,
-  Check,
-  ChevronDown,
-  Coffee,
-  Eraser,
-  Eye,
-  Folder,
-  ImageIcon,
-  LockKeyhole,
-  Menu,
-  MessageCircle,
-  Minus,
-  Orbit,
-  Paintbrush,
-  Play,
-  RotateCcw,
-  Send,
-  Sparkles,
-  Square,
-  Trash2,
-  X,
-} from "lucide-react";
+import { Brush, Check, ChevronDown, Coffee, CornerDownRight, Eraser, Eye, Folder, Image as ImageIcon, LockKeyhole, Menu, MessageCircle, Minus, Orbit, Paintbrush, Play, RotateCcw, Send, Smile, Sparkles, Square, Trash2, X } from "lucide-react";
 import avatarAsset from "@/assets/teridayo-avatar.png.asset.json";
 import orcaAsset from "@/assets/orca-credential.jpg.asset.json";
 import { Button } from "@/components/ui/button";
@@ -68,6 +46,24 @@ type Submission = {
   approved: boolean;
   created_at: string;
 };
+
+type WallComment = {
+  id: string;
+  author: string;
+  content: string;
+  approved: boolean;
+  parent_id: string | null;
+  is_admin_reply: boolean;
+  created_at: string;
+};
+
+const customEmojis = [
+  "♡", "✨", "🎨", "💕", "🌟", "🌈", "🥺", "😭", "💖", "🐛",
+  "🫶", "🍰", "☕", "🌙", "⭐", "🌸", "🍀", "🔥", "👾", "🎮",
+  "🐱", "🐳", "🦷", "💀", "✅", "❌", "💙", "🩷", "🧡", "💚",
+];
+
+const ADMIN_DISPLAY_NAME = "Maxine";
 
 function Window({ title, children, className = "" }: { title: string; children: React.ReactNode; className?: string }) {
   return (
@@ -448,9 +444,157 @@ function GalleryDisplay() {
   );
 }
 
-function Community() {
-  const [comments, setComments] = useState<string[]>([]);
+function CommentThread({ comment, replies, adminMode, onReply, onDelete }: {
+  comment: WallComment;
+  replies: WallComment[];
+  adminMode: boolean;
+  onReply: (parentId: string, content: string, isAdmin: boolean) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [showReplyBox, setShowReplyBox] = useState(false);
+  const [replyText, setReplyText] = useState("");
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
+  const handleSendReply = () => {
+    if (!replyText.trim()) return;
+    onReply(comment.id, replyText, adminMode);
+    setReplyText("");
+    setShowReplyBox(false);
+    setShowEmojiPicker(false);
+  };
+
+  return (
+    <>
+      <article className={`comment ${comment.is_admin_reply ? "admin-reply" : ""}`}>
+        <div className="comment-header">
+          <strong>{comment.author}{comment.is_admin_reply && <small className="admin-tag">ADMIN</small>}</strong>
+          <span className="comment-date">{new Date(comment.created_at).toLocaleDateString("es", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+        </div>
+        <p className="comment-content">{comment.content}</p>
+        <div className="comment-actions">
+          <button className="comment-action-btn" onClick={() => setShowReplyBox(!showReplyBox)}><CornerDownRight size={12} /> Responder</button>
+          {adminMode && <button className="comment-action-btn danger" onClick={() => onDelete(comment.id)}><Trash2 size={12} /> Eliminar</button>}
+        </div>
+        {showReplyBox && (
+          <div className="reply-box">
+            <div className="emoji-row">
+              <button className="emoji-toggle" onClick={() => setShowEmojiPicker(!showEmojiPicker)}><Smile size={16} /> Emojis</button>
+              {showEmojiPicker && (
+                <div className="emoji-picker">
+                  {customEmojis.map((emoji) => (
+                    <button key={emoji} className="emoji-btn" onClick={() => setReplyText(replyText + emoji)}>{emoji}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <Textarea value={replyText} onChange={(e) => setReplyText(e.target.value)} placeholder="Tu respuesta..." className="reply-textarea" />
+            <Button variant="signal" size="sm" onClick={handleSendReply}><Send size={14} /> Enviar</Button>
+          </div>
+        )}
+      </article>
+      {replies.length > 0 && (
+        <div className="reply-thread">
+          {replies.map((reply) => (
+            <article key={reply.id} className={`comment reply ${reply.is_admin_reply ? "admin-reply" : ""}`}>
+              <div className="comment-header">
+                <strong>{reply.author}{reply.is_admin_reply && <small className="admin-tag">ADMIN</small>}</strong>
+                <span className="comment-date">{new Date(reply.created_at).toLocaleDateString("es", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+              </div>
+              <p className="comment-content">{reply.content}</p>
+              {adminMode && (
+                <div className="comment-actions">
+                  <button className="comment-action-btn danger" onClick={() => onDelete(reply.id)}><Trash2 size={12} /> Eliminar</button>
+                </div>
+              )}
+            </article>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+function Community({ adminMode }: { adminMode: boolean }) {
+  const [comments, setComments] = useState<WallComment[]>([]);
   const [comment, setComment] = useState("");
+  const [author, setAuthor] = useState("");
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const loadComments = async () => {
+    const { data, error } = await supabase
+      .from("wall_comments")
+      .select("*")
+      .eq("approved", true)
+      .order("created_at", { ascending: false });
+    if (error) {
+      setError("No se pudieron cargar los comentarios.");
+    } else {
+      setComments(data as WallComment[]);
+      setError("");
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    loadComments();
+  }, []);
+
+  const sendComment = async () => {
+    if (!comment.trim()) return;
+    const finalAuthor = adminMode ? (author.trim() || ADMIN_DISPLAY_NAME) : "Anónimo";
+    const { data, error } = await supabase
+      .from("wall_comments")
+      .insert({
+        content: comment.trim(),
+        author: finalAuthor,
+        approved: adminMode,
+        is_admin_reply: false,
+        parent_id: null,
+      })
+      .select("*")
+      .single();
+    if (error) {
+      setError("No se pudo enviar el comentario.");
+      return;
+    }
+    if (adminMode && data) {
+      setComments((prev) => [data as WallComment, ...prev]);
+    } else {
+      setError("");
+    }
+    setComment("");
+  };
+
+  const sendReply = async (parentId: string, content: string, isAdmin: boolean) => {
+    const replyAuthor = isAdmin ? ADMIN_DISPLAY_NAME : "Anónimo";
+    const { data, error } = await supabase
+      .from("wall_comments")
+      .insert({
+        content,
+        author: replyAuthor,
+        approved: isAdmin,
+        is_admin_reply: isAdmin,
+        parent_id: parentId,
+      })
+      .select("*")
+      .single();
+    if (error) return;
+    if (isAdmin && data) {
+      setComments((prev) => [...prev, data as WallComment]);
+    }
+  };
+
+  const deleteComment = async (id: string) => {
+    const { error } = await supabase.from("wall_comments").delete().eq("id", id);
+    if (error) return;
+    setComments((prev) => prev.filter((c) => c.id !== id && c.parent_id !== id));
+  };
+
+  const topLevel = comments.filter((c) => !c.parent_id);
+  const getReplies = (parentId: string) => comments.filter((c) => c.parent_id === parentId);
+
   return (
     <main className="page-shell">
       <div className="page-heading">
@@ -467,9 +611,35 @@ function Community() {
             </div>
             <p>¡Haii! Bienvenidos al muro oficial de la web.</p>
           </article>
-          {comments.map((item, index) => <article className="comment" key={`${item}-${index}`}>{item}</article>)}
-          <Textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Tu comentario anónimo..." />
-          <Button variant="signal" onClick={() => { if (comment.trim()) { setComments([...comments, comment]); setComment(""); } }}><MessageCircle />Enviar</Button>
+          {loading && <p className="window-copy">Cargando comentarios...</p>}
+          {error && <p className="submit-status error">{error}</p>}
+          {!loading && topLevel.length === 0 && <p className="window-copy">No hay comentarios todavía. ¡Sé el primero! ♡</p>}
+          {topLevel.map((c) => (
+            <CommentThread
+              key={c.id}
+              comment={c}
+              replies={getReplies(c.id)}
+              adminMode={adminMode}
+              onReply={sendReply}
+              onDelete={deleteComment}
+            />
+          ))}
+          {adminMode && (
+            <Input className="comment-author-input" placeholder="Tu nombre de usuario (admin)..." value={author} onChange={(e) => setAuthor(e.target.value)} />
+          )}
+          <div className="emoji-row">
+            <button className="emoji-toggle" onClick={() => setShowEmojiPicker(!showEmojiPicker)}><Smile size={16} /> Emojis personalizados</button>
+            {showEmojiPicker && (
+              <div className="emoji-picker">
+                {customEmojis.map((emoji) => (
+                  <button key={emoji} className="emoji-btn" onClick={() => setComment(comment + emoji)}>{emoji}</button>
+                ))}
+              </div>
+            )}
+          </div>
+          <Textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder={adminMode ? "Escribe como admin..." : "Tu comentario anónimo..."} />
+          <Button variant="signal" onClick={sendComment} disabled={!comment.trim()}><MessageCircle /> {adminMode ? "Publicar como admin" : "Enviar"}</Button>
+          {!adminMode && <p className="window-copy comment-hint">Los comentarios aparecen cuando Maxine los aprueba.</p>}
         </Window>
         <div className="community-side">
           <Window title="Bocetos y rayones">
@@ -616,7 +786,7 @@ export function TeriApp() {
       {adminMode && <AdminPanel onClose={() => setAdminMode(false)} />}
       {page === "inicio" && <Home setPage={setPage} />}
       {page === "portafolio" && <Portfolio />}
-      {page === "comunidad" && <Community />}
+      {page === "comunidad" && <Community adminMode={adminMode} />}
       {page === "sobre-mi" && <About />}
       {page === "contacto" && <Contact />}
       <footer className="system-footer"><span>MUNCHINE ONLINE!</span><span>ENLACES VERIFICADOS · ES · 01:23 P.M.</span><div><Play size={12} /> DEEP_SEA_SIGNAL.WAV</div></footer>
