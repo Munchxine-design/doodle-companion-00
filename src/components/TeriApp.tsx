@@ -113,7 +113,7 @@ const getStoredShimejiConfig = () => {
   };
 };
 
-// --- COMPONENTE SHIMEJI CON SEGUIMIENTO DE CURSOR Y SALTO AL CLIC ---
+// --- COMPONENTE SHIMEJI FINAL (CAPTURA NATIVA Y SALTO) ---
 function VirtualShimeji() {
   const [config, setConfig] = useState(getStoredShimejiConfig);
   const [pos, setPos] = useState({ x: 120, y: window.innerHeight - 90 });
@@ -123,9 +123,7 @@ function VirtualShimeji() {
   const [isDragging, setIsDragging] = useState(false);
   const [isJumping, setIsJumping] = useState(false);
 
-  const dragOffsetRef = useRef({ x: 0, y: 0 });
-  const isDraggingRef = useRef(isDragging);
-  isDraggingRef.current = isDragging;
+  const dragOffsetRef = useRef({ x: 32, y: 32 });
 
   useEffect(() => {
     const handleStorage = () => setConfig(getStoredShimejiConfig());
@@ -141,31 +139,6 @@ function VirtualShimeji() {
     }, 150);
     return () => clearInterval(interval);
   }, [currentFrames.length, state]);
-
-  // Manejo global de movimiento y liberación con listeners de window para evitar desfases
-  useEffect(() => {
-    const handlePointerMove = (e: MouseEvent) => {
-      if (!isDraggingRef.current) return;
-      setPos({
-        x: e.clientX - dragOffsetRef.current.x,
-        y: e.clientY - dragOffsetRef.current.y,
-      });
-    };
-
-    const handlePointerUp = () => {
-      if (isDraggingRef.current) {
-        setIsDragging(false);
-        setState("fall");
-      }
-    };
-
-    window.addEventListener("mousemove", handlePointerMove);
-    window.addEventListener("mouseup", handlePointerUp);
-    return () => {
-      window.removeEventListener("mousemove", handlePointerMove);
-      window.removeEventListener("mouseup", handlePointerUp);
-    };
-  }, []);
 
   // IA Autónoma (cuando no se arrastra ni salta)
   useEffect(() => {
@@ -241,15 +214,32 @@ function VirtualShimeji() {
 
   const handlePointerDown = (e: PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
     setIsDragging(true);
     setState("drag");
 
     const rect = e.currentTarget.getBoundingClientRect();
-    // Guardamos la distancia exacta desde el cursor hasta la esquina superior izquierda del elemento
     dragOffsetRef.current = {
       x: e.clientX - rect.left,
       y: e.clientY - rect.top,
     };
+  };
+
+  const handlePointerMove = (e: PointerEvent<HTMLDivElement>) => {
+    if (!isDragging) return;
+    setPos({
+      x: e.clientX - dragOffsetRef.current.x,
+      y: e.clientY - dragOffsetRef.current.y,
+    });
+  };
+
+  const handlePointerUp = (e: PointerEvent<HTMLDivElement>) => {
+    if (!isDragging) return;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch { /* ignore */ }
+    setIsDragging(false);
+    setState("fall"); // Activa la caída al soltarlo
   };
 
   // Animación de salto al hacer clic sin arrastrar
@@ -260,12 +250,11 @@ function VirtualShimeji() {
     setState(randomAnim);
     setFrameIndex(0);
 
-    // Pequeño impulso vertical de salto (efecto rebote)
     const startY = pos.y;
     let jumpProgress = 0;
     const jumpInterval = setInterval(() => {
       jumpProgress += 0.15;
-      const jumpHeight = Math.sin(jumpProgress * Math.PI) * 45; // altura del salto
+      const jumpHeight = Math.sin(jumpProgress * Math.PI) * 45;
       setPos(p => ({ ...p, y: startY - jumpHeight }));
 
       if (jumpProgress >= 1) {
@@ -282,6 +271,8 @@ function VirtualShimeji() {
   return (
     <div
       onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
       onClick={handleClick}
       style={{
         position: 'fixed',
