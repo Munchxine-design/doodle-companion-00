@@ -15,6 +15,20 @@
       "when": 1790099631972,
       "tag": "0001_drawings_bucket_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790123737876,
+      "tag": "0002_customization_chat_emojis_tasks",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790123775315,
+      "tag": "0003_site_assets_bucket_policies",
+      "breakpoints": true
     }
   ]
 }

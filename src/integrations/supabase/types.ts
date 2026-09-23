@@ -14,6 +14,215 @@ export type Database = {
   }
   public: {
     Tables: {
+      about_blocks: {
+        Row: {
+          color: string
+          content: string
+          created_at: string
+          font_size: number
+          height: number
+          id: string
+          image_path: string | null
+          kind: string
+          rotation: number
+          width: number
+          x: number
+          y: number
+          z_index: number
+        }
+        Insert: {
+          color?: string
+          content?: string
+          created_at?: string
+          font_size?: number
+          height?: number
+          id?: string
+          image_path?: string | null
+          kind?: string
+          rotation?: number
+          width?: number
+          x?: number
+          y?: number
+          z_index?: number
+        }
+        Update: {
+          color?: string
+          content?: string
+          created_at?: string
+          font_size?: number
+          height?: number
+          id?: string
+          image_path?: string | null
+          kind?: string
+          rotation?: number
+          width?: number
+          x?: number
+          y?: number
+          z_index?: number
+        }
+        Relationships: []
+      }
+      admin_tasks: {
+        Row: {
+          color: string
+          created_at: string
+          done: boolean
+          due_date: string | null
+          id: string
+          notes: string
+          title: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          done?: boolean
+          due_date?: string | null
+          id?: string
+          notes?: string
+          title: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          done?: boolean
+          due_date?: string | null
+          id?: string
+          notes?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      artworks: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          image_path: string
+          title: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          id?: string
+          image_path: string
+          title?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          image_path?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      chat_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          sender: string
+          thread_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          sender?: string
+          thread_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          sender?: string
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "chat_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_threads: {
+        Row: {
+          access_token: string
+          created_at: string
+          id: string
+          last_message_at: string
+          subject: string
+          unread_for_admin: boolean
+          unread_for_visitor: boolean
+          visitor_contact: string
+          visitor_name: string
+        }
+        Insert: {
+          access_token?: string
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          subject?: string
+          unread_for_admin?: boolean
+          unread_for_visitor?: boolean
+          visitor_contact?: string
+          visitor_name?: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          subject?: string
+          unread_for_admin?: boolean
+          unread_for_visitor?: boolean
+          visitor_contact?: string
+          visitor_name?: string
+        }
+        Relationships: []
+      }
+      custom_emojis: {
+        Row: {
+          created_at: string
+          id: string
+          image_path: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_path: string
+          name?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_path?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      site_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value?: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       submissions: {
         Row: {
           approved: boolean
