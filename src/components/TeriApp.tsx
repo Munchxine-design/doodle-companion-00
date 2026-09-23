@@ -97,12 +97,15 @@ const getStoredSpotify = () => {
 const getStoredShimejiFrames = (): string[] => {
   const saved = localStorage.getItem("site_shimeji_frames");
   if (saved) {
-    try { return JSON.parse(saved); } catch { /* fallback */ }
+    try { 
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    } catch { /* fallback */ }
   }
   return [avatarAsset.url];
 };
 
-// --- COMPONENTE SHIMEJI MÓVIL ---
+// --- COMPONENTE SHIMEJI MÓVIL CON ANIMACIÓN DE FOTOGRAMAS ---
 function VirtualShimeji() {
   const [pos, setPos] = useState({ x: 100, y: window.innerHeight - 90 });
   const [direction, setDirection] = useState<1 | -1>(1);
@@ -157,11 +160,11 @@ function VirtualShimeji() {
         pointerEvents: 'none',
         transform: direction === -1 ? 'scaleX(-1)' : 'scaleX(1)',
       }}
-      title="¡Shimeji caminando!"
+      title="¡Shimeji animado caminando!"
     >
       <img 
-        src={frames[frameIndex % frames.length] || frames[0]} 
-        alt="Shimeji" 
+        src={frames[frameIndex % frames.length] || avatarAsset.url} 
+        alt="Shimeji Animado" 
         style={{ width: '100%', height: '100%', objectFit: 'contain', filter: 'drop-shadow(2px 4px 6px rgba(0,0,0,0.5))' }} 
       />
     </div>
@@ -769,7 +772,7 @@ function Community({ adminMode }: { adminMode: boolean }) {
       id: Date.now().toString(),
       content: comment.trim(),
       author: finalAuthor,
-      approved: true, // Si es admin, se aprueba automáticamente
+      approved: true,
       is_admin_reply: adminMode ? true : false,
       parent_id: null,
       created_at: new Date().toISOString(),
@@ -1194,8 +1197,8 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
 
       {activeTab === "shimeji" && (
         <div style={{ padding: '20px', background: '#0f203b', borderRadius: '8px', border: '1px solid #1e3a8a' }}>
-          <h3 style={{ marginBottom: '15px' }}>Mascota Shimeji (Fotogramas)</h3>
-          <p style={{ color: '#8892b0', fontSize: '13px', marginBottom: '15px' }}>Sube fotogramas PNG para animar a tu mascota:</p>
+          <h3 style={{ marginBottom: '15px' }}>Mascota Shimeji (Fotogramas Animados)</h3>
+          <p style={{ color: '#8892b0', fontSize: '13px', marginBottom: '15px' }}>Sube varios fotogramas PNG para animar los pasos de tu mascota:</p>
           <label className="upload-button" style={{ background: '#1e3a8a', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', display: 'inline-block' }}>
             <ImageIcon size={14} /> Seleccionar fotogramas PNG
             <input type="file" accept="image/*" multiple onChange={(e) => {
@@ -1211,13 +1214,18 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
                   if (count === files.length) {
                     setShimejiFrames(loaded);
                     localStorage.setItem("site_shimeji_frames", JSON.stringify(loaded));
-                    alert("¡Shimeji actualizado!");
+                    alert("¡Fotogramas del Shimeji actualizados!");
                   }
                 };
                 reader.readAsDataURL(file);
               });
             }} style={{ display: 'none' }} />
           </label>
+          <div style={{ display: 'flex', gap: '10px', marginTop: '15px', flexWrap: 'wrap' }}>
+            {shimejiFrames.map((frame, idx) => (
+              <img key={idx} src={frame} alt={`Frame ${idx}`} style={{ width: '40px', height: '40px', objectFit: 'contain', background: '#0a192f', border: '1px solid #1e3a8a', borderRadius: '4px' }} />
+            ))}
+          </div>
         </div>
       )}
 
