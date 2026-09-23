@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent, type ChangeEvent } from "react";
-import { Brush, Check, ChevronDown, Coffee, CornerDownRight, Eraser, Eye, Folder, Image as ImageIcon, LockKeyhole, Menu, MessageCircle, Minus, Orbit, Paintbrush, Play, RotateCcw, Send, Smile, Sparkles, Square, Trash2, X } from "lucide-react";
+import { Brush, Check, ChevronDown, Coffee, CornerDownRight, Eraser, Eye, Folder, Image as ImageIcon, LockKeyhole, Menu, MessageCircle, Minus, Orbit, Paintbrush, Play, Pause, RotateCcw, Send, Smile, Sparkles, Square, Trash2, X, Music } from "lucide-react";
 import avatarAsset from "@/assets/teridayo-avatar.png.asset.json";
 import orcaAsset from "@/assets/orca-credential.jpg.asset.json";
 import { Button } from "@/components/ui/button";
@@ -63,13 +63,27 @@ type PortfolioItem = {
   image_path: string;
 };
 
-// Funciones globales de estado guardado localmente
+// Estados globales almacenados en LocalStorage
 const getStoredProfile = () => {
   return JSON.parse(localStorage.getItem("site_profile") || JSON.stringify({ name: "Maxine", avatar: avatarAsset.url }));
 };
 
+const getStoredImagesConfig = () => {
+  return JSON.parse(localStorage.getItem("site_images_config") || JSON.stringify({
+    homeProfile: avatarAsset.url,
+    homeDirects: avatarAsset.url,
+    homeIntro: avatarAsset.url,
+    aboutMain: avatarAsset.url,
+    aboutInterests: avatarAsset.url,
+    credential: orcaAsset.url,
+  }));
+};
+
 const getStoredEmojis = () => {
-  return JSON.parse(localStorage.getItem("site_emojis") || JSON.stringify(["♡", "✨", "🎨", "💕", "🌟", "🌈", "🥺", "😭", "💖", "🐛", "🫶", "🍰", "☕", "🌙", "⭐", "🌸", "🍀", "🔥", "👾", "🎮"]));
+  return JSON.parse(localStorage.getItem("site_custom_emojis") || JSON.stringify([
+    { name: "corazon", url: avatarAsset.url },
+    { name: "estrella", url: avatarAsset.url }
+  ]));
 };
 
 const getStoredPortfolio = () => {
@@ -77,6 +91,103 @@ const getStoredPortfolio = () => {
     { id: "1", title: "MEGAMAN!!!", category: "Drawings", image_path: avatarAsset.url }
   ]));
 };
+
+const getStoredMusic = () => {
+  return JSON.parse(localStorage.getItem("site_music") || JSON.stringify({
+    title: "Deep Sea Signal.ogg",
+    url: "",
+    isPlaying: false
+  }));
+};
+
+const getStoredShimeji = () => {
+  return localStorage.getItem("site_shimeji_img") || avatarAsset.url;
+};
+
+// --- COMPONENTE SHIMEJI (Mascota Virtual) ---
+function VirtualShimeji() {
+  const [pos, setPos] = useState({ x: 100, y: window.innerHeight - 120 });
+  const [isDragging, setIsDragging] = useState(false);
+  const shimejiImg = getStoredShimeji();
+
+  useEffect(() => {
+    const handleMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+      setPos({ x: e.clientX - 25, y: e.clientY - 25 });
+    };
+    const handleUp = () => setIsDragging(false);
+
+    if (isDragging) {
+      window.addEventListener("mousemove", handleMove);
+      window.addEventListener("mouseup", handleUp);
+    }
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+    };
+  }, [isDragging]);
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        left: `${pos.x}px`,
+        top: `${pos.y}px`,
+        zIndex: 9998,
+        cursor: 'grab',
+        width: '50px',
+        height: '50px',
+        filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.4))',
+        userSelect: 'none',
+      }}
+      onMouseDown={() => setIsDragging(true)}
+      title="¡Arrástrame como un Shimeji!"
+    >
+      <img src={shimejiImg} alt="Shimeji" style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }} />
+    </div>
+  );
+}
+
+// --- WIDGET DE MÚSICA ESTILO WINDOWS XP ---
+function MusicWidget() {
+  const [music, setMusic] = useState(getStoredMusic());
+  const [minimized, setMinimized] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  const togglePlay = () => {
+    const next = !music.isPlaying;
+    setMusic({ ...music, isPlaying: next });
+    localStorage.setItem("site_music", JSON.stringify({ ...music, isPlaying: next }));
+    if (audioRef.current) {
+      if (next) audioRef.current.play().catch(() => {});
+      else audioRef.current.pause();
+    }
+  };
+
+  if (!music.url) return null;
+
+  return (
+    <div style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 9997, width: '240px', background: '#ece9d8', border: '2px solid #0055ea', borderRadius: '5px 5px 0 0', boxShadow: '2px 2px 10px rgba(0,0,0,0.5)', fontFamily: 'Tahoma, sans-serif' }}>
+      <div style={{ background: 'linear-gradient(to right, #0055ea, #1690ff)', color: 'white', padding: '4px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', fontWeight: 'bold' }}>
+        <span>🎵 Reproductor WinXP</span>
+        <button onClick={() => setMinimized(!minimized)} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 'bold' }}>{minimized ? "□" : "_"}</button>
+      </div>
+      {!minimized && (
+        <div style={{ padding: '10px', background: '#f5f4f0', color: '#000', fontSize: '12px' }}>
+          <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: '8px' }}>
+            <b>Reproduciendo:</b> {music.title}
+          </div>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <Button size="sm" onClick={togglePlay} style={{ background: '#3d953d', color: 'white', height: '26px', fontSize: '11px' }}>
+              {music.isPlaying ? <Pause size={12} /> : <Play size={12} />} {music.isPlaying ? "Pausar" : "Reproducir"}
+            </Button>
+          </div>
+          <audio ref={audioRef} src={music.url} loop />
+        </div>
+      )}
+    </div>
+  );
+}
 
 function Window({ title, children, className = "" }: { title: string; children: React.ReactNode; className?: string }) {
   return (
@@ -136,6 +247,8 @@ function AdminLoginDialog({ open, onOpenChange, onSuccess }: { open: boolean; on
 function TabletExperience({ setPage }: { setPage: (page: Page) => void }) {
   const sectionRef = useRef<HTMLDivElement>(null);
   const [progress, setProgress] = useState(0);
+  const images = getStoredImagesConfig();
+
   useEffect(() => {
     const update = () => {
       const section = sectionRef.current;
@@ -148,9 +261,11 @@ function TabletExperience({ setPage }: { setPage: (page: Page) => void }) {
     window.addEventListener("scroll", update, { passive: true });
     return () => window.removeEventListener("scroll", update);
   }, []);
+
   const stage = progress < 0.34 ? 0 : progress < 0.67 ? 1 : 2;
   const penX = 18 + progress * 58;
   const penY = 34 + Math.sin(progress * Math.PI * 4) * 17;
+
   return (
     <div className="tablet-scroll" ref={sectionRef}>
       <div className="tablet-sticky">
@@ -173,7 +288,7 @@ function TabletExperience({ setPage }: { setPage: (page: Page) => void }) {
                 <div className="screen-grid" />
                 <div className={`stage-art sketch ${stage === 0 ? "visible" : ""}`}><AvatarBlueprint mode="sketch" /></div>
                 <div className={`stage-art lineart ${stage === 1 ? "visible" : ""}`}><AvatarBlueprint mode="line" /></div>
-                <div className={`stage-art final ${stage === 2 ? "visible" : ""}`}><img src={getStoredProfile().avatar} alt="Ilustración final de Teri" /></div>
+                <div className={`stage-art final ${stage === 2 ? "visible" : ""}`}><img src={images.homeProfile} alt="Ilustración final de Teri" /></div>
                 <div className="screen-readout"><span>ACTIVE_LAYER: 0{stage + 1}_{["SKETCH", "LINEART", "RENDER"][stage]}</span><span>PRESSURE: {Math.round(52 + progress * 35)}%</span><span>STYLUS: CONNECTED</span></div>
                 <div className="stylus" style={{ left: `${penX}%`, top: `${penY}%` }}><span /></div>
               </div>
@@ -196,23 +311,24 @@ function AvatarBlueprint({ mode }: { mode: "sketch" | "line" }) {
 
 function ProfileBand() {
   const profile = getStoredProfile();
+  const images = getStoredImagesConfig();
   return (
     <section className="profile-band">
-      <Window title="Munchxine_profile.exe"><div className="profile-content"><img src={profile.avatar} alt="Avatar pixel art de TeriDayo" /><div><p className="eyebrow">HIYAAA!!</p><h2>{profile.name}</h2><p>Artista chileno de 19 años • Arte 2D y 3D • ESP / ENG</p><div className="tags"><span>Roblox</span><span>ARGs</span><span>Pokemon</span></div></div></div></Window>
-      <Window title="ACCESOS_DIRECTOS"><div className="online-content"><h2>Maxine Online!</h2><div className="social-row"><Button variant="station"><X /> Twitter / X</Button><Button variant="station"><Coffee /> Ko-fi</Button></div><div className="online-art"><img src={profile.avatar} alt="Teri online" /><span>@Munchxine_</span></div></div></Window>
+      <Window title="Munchxine_profile.exe"><div className="profile-content"><img src={images.homeProfile} alt="Avatar pixel art de TeriDayo" /><div><p className="eyebrow">HIYAAA!!</p><h2>{profile.name}</h2><p>Artista chileno de 19 años • Arte 2D y 3D • ESP / ENG</p><div className="tags"><span>Roblox</span><span>ARGs</span><span>Pokemon</span></div></div></div></Window>
+      <Window title="ACCESOS_DIRECTOS"><div className="online-content"><h2>Maxine Online!</h2><div className="social-row"><Button variant="station"><X /> Twitter / X</Button><Button variant="station"><Coffee /> Ko-fi</Button></div><div className="online-art"><img src={images.homeDirects} alt="Teri online" /><span>@Munchxine_</span></div></div></Window>
     </section>
   );
 }
 
 function Home({ setPage }: { setPage: (page: Page) => void }) {
   const profile = getStoredProfile();
-  return <><TabletExperience setPage={setPage} /><section className="intro-band"><Window title="Munchxine.txt"><div className="intro-copy"><img src={profile.avatar} alt="Avatar de Teri" /><div><p className="eyebrow">WELCOME_NOTE.LOG</p><h2>¡Haii! Mi nombre es {profile.name}.</h2><p>Soy un artista digital enfocado en el arte 2D, tando ilustracion como modelos Vtuber/Pngtuber. </p></div></div></Window></section><ProfileBand /></>;
+  const images = getStoredImagesConfig();
+  return <><TabletExperience setPage={setPage} /><section className="intro-band"><Window title="Munchxine.txt"><div className="intro-copy"><img src={images.homeIntro} alt="Avatar de Teri" /><div><p className="eyebrow">WELCOME_NOTE.LOG</p><h2>¡Haii! Mi nombre es {profile.name}.</h2><p>Soy un artista digital enfocado en el arte 2D, tando ilustracion como modelos Vtuber/Pngtuber. </p></div></div></Window></section><ProfileBand /></>;
 }
 
 function Portfolio() {
   const [category, setCategory] = useState("Todas las obras");
   const items: PortfolioItem[] = getStoredPortfolio();
-  
   const filtered = category === "Todas las obras" ? items : items.filter(i => i.category === category);
 
   return (
@@ -340,7 +456,6 @@ function PaintCanvas() {
       if (!canvas) throw new Error("No canvas");
 
       const dataUrl = canvas.toDataURL("image/png");
-      
       const localSubs = JSON.parse(localStorage.getItem("local_submissions") || "[]");
       localSubs.unshift({
         id: Date.now().toString(),
@@ -444,7 +559,7 @@ function CommentThread({ comment, replies, adminMode, customEmojis, onReply, onD
   comment: WallComment;
   replies: WallComment[];
   adminMode: boolean;
-  customEmojis: string[];
+  customEmojis: Array<{ name: string; url: string }>;
   onReply: (parentId: string, content: string, isAdmin: boolean) => void;
   onDelete: (id: string) => void;
 }) {
@@ -477,9 +592,11 @@ function CommentThread({ comment, replies, adminMode, customEmojis, onReply, onD
             <div className="emoji-row">
               <button className="emoji-toggle" onClick={() => setShowEmojiPicker(!showEmojiPicker)}><Smile size={16} /> Emojis</button>
               {showEmojiPicker && (
-                <div className="emoji-picker">
-                  {customEmojis.map((emoji) => (
-                    <button key={emoji} className="emoji-btn" onClick={() => setReplyText(replyText + emoji)}>{emoji}</button>
+                <div className="emoji-picker" style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                  {customEmojis.map((emoji, idx) => (
+                    <button key={idx} className="emoji-btn" onClick={() => setReplyText(replyText + ` [emoji:${emoji.name}] `)} style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}>
+                      <img src={emoji.url} alt={emoji.name} width={20} height={20} style={{ objectFit: 'contain' }} />
+                    </button>
                   ))}
                 </div>
               )}
@@ -518,6 +635,7 @@ function Community({ adminMode }: { adminMode: boolean }) {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [loading, setLoading] = useState(true);
   const profile = getStoredProfile();
+  const images = getStoredImagesConfig();
   const customEmojis = getStoredEmojis();
 
   useEffect(() => {
@@ -580,7 +698,7 @@ function Community({ adminMode }: { adminMode: boolean }) {
         <Window title="Muro de Maxine" className="wall">
           <article className="post">
             <div className="post-author">
-              <img src={profile.avatar} alt="Teri" />
+              <img src={images.homeProfile} alt="Teri" />
               <div><strong>{profile.name} <small>ADMIN / DEV :3C</small></strong><span>14 sept 2026, 0:24</span></div>
             </div>
             <p>¡Haii! Bienvenidos al muro oficial de la web.</p>
@@ -604,9 +722,11 @@ function Community({ adminMode }: { adminMode: boolean }) {
           <div className="emoji-row">
             <button className="emoji-toggle" onClick={() => setShowEmojiPicker(!showEmojiPicker)}><Smile size={16} /> Emojis personalizados</button>
             {showEmojiPicker && (
-              <div className="emoji-picker">
-                {customEmojis.map((emoji: string) => (
-                  <button key={emoji} className="emoji-btn" onClick={() => setComment(comment + emoji)}>{emoji}</button>
+              <div className="emoji-picker" style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                {customEmojis.map((emoji: { name: string; url: string }, idx: number) => (
+                  <button key={idx} className="emoji-btn" onClick={() => setComment(comment + ` [emoji:${emoji.name}] `)} style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}>
+                    <img src={emoji.url} alt={emoji.name} width={20} height={20} style={{ objectFit: 'contain' }} />
+                  </button>
                 ))}
               </div>
             )}
@@ -631,23 +751,23 @@ function Community({ adminMode }: { adminMode: boolean }) {
 }
 
 function AdminPanel({ onClose }: { onClose: () => void }) {
-  const [activeTab, setActiveTab] = useState<"envios" | "perfil" | "imagenes" | "emojis" | "organizador">("envios");
+  const [activeTab, setActiveTab] = useState<"envios" | "perfil" | "imagenes" | "emojis" | "musica" | "shimeji" | "organizador">("envios");
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   
-  // Perfil state
   const [profile, setProfile] = useState(getStoredProfile());
+  const [imagesConfig, setImagesConfig] = useState(getStoredImagesConfig());
+  const [emojis, setEmojis] = useState<Array<{ name: string; url: string }>>(getStoredEmojis());
+  const [newEmojiName, setNewEmojiName] = useState("");
+  const [newEmojiImg, setNewEmojiImg] = useState("");
   
-  // Emojis state
-  const [emojis, setEmojis] = useState<string[]>(getStoredEmojis());
-  const [newEmojiInput, setNewEmojiInput] = useState("");
-
-  // Portafolio state
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>(getStoredPortfolio());
   const [newArtTitle, setNewArtTitle] = useState("");
   const [newArtCategory, setNewArtCategory] = useState("Drawings");
   const [newArtImage, setNewArtImage] = useState("");
 
-  // Todo / Calendar state
+  const [music, setMusic] = useState(getStoredMusic());
+  const [shimejiImg, setShimejiImg] = useState(getStoredShimeji());
+
   const [todos, setTodos] = useState<{ id: string; text: string; done: boolean }[]>(() => JSON.parse(localStorage.getItem("admin_todos") || "[]"));
   const [newTodoText, setNewTodoText] = useState("");
   const [calendarNote, setCalendarNote] = useState(() => localStorage.getItem("admin_calendar") || "");
@@ -657,99 +777,69 @@ function AdminPanel({ onClose }: { onClose: () => void }) {
     setSubmissions(local);
   }, []);
 
-  const handleProfileAvatarUpload = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleImgConfigUpload = (key: string, e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
       if (ev.target?.result) {
-        const updated = { ...profile, avatar: ev.target.result as string };
-        setProfile(updated);
-        localStorage.setItem("site_profile", JSON.stringify(updated));
+        const updated = { ...imagesConfig, [key]: ev.target.result as string };
+        setImagesConfig(updated);
+        localStorage.setItem("site_images_config", JSON.stringify(updated));
       }
     };
     reader.readAsDataURL(file);
   };
 
-  const saveProfileName = () => {
-    localStorage.setItem("site_profile", JSON.stringify(profile));
-    alert("¡Perfil actualizado con éxito!");
+  const handleEmojiUpload = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      if (ev.target?.result) setNewEmojiImg(ev.target.result as string);
+    };
+    reader.readAsDataURL(file);
   };
 
   const addEmoji = () => {
-    if (!newEmojiInput.trim()) return;
-    const updated = [...emojis, newEmojiInput.trim()];
+    if (!newEmojiName.trim() || !newEmojiImg) return;
+    const updated = [...emojis, { name: newEmojiName.trim().toLowerCase(), url: newEmojiImg }];
     setEmojis(updated);
-    localStorage.setItem("site_emojis", JSON.stringify(updated));
-    setNewEmojiInput("");
+    localStorage.setItem("site_custom_emojis", JSON.stringify(updated));
+    setNewEmojiName("");
+    setNewEmojiImg("");
   };
 
   const removeEmoji = (index: number) => {
     const updated = emojis.filter((_, i) => i !== index);
     setEmojis(updated);
-    localStorage.setItem("site_emojis", JSON.stringify(updated));
+    localStorage.setItem("site_custom_emojis", JSON.stringify(updated));
   };
 
-  const handlePortfolioImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
+  const handlePortfolioUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
-      if (ev.target?.result) {
-        setNewArtImage(ev.target.result as string);
-      }
+      if (ev.target?.result) setNewArtImage(ev.target.result as string);
     };
     reader.readAsDataURL(file);
   };
 
-  const addPortfolioItem = () => {
-    if (!newArtTitle.trim() || !newArtImage) {
-      alert("Por favor ingresa un título y selecciona una imagen.");
-      return;
-    }
-    const newItem: PortfolioItem = {
-      id: Date.now().toString(),
-      title: newArtTitle.trim(),
-      category: newArtCategory,
-      image_path: newArtImage,
-    };
-    const updated = [newItem, ...portfolioItems];
+  const addPortfolio = () => {
+    if (!newArtTitle.trim() || !newArtImage) return;
+    const item: PortfolioItem = { id: Date.now().toString(), title: newArtTitle.trim(), category: newArtCategory, image_path: newArtImage };
+    const updated = [item, ...portfolioItems];
     setPortfolioItems(updated);
     localStorage.setItem("site_portfolio", JSON.stringify(updated));
     setNewArtTitle("");
     setNewArtImage("");
-    alert("¡Obra subida al portafolio!");
   };
 
-  const removePortfolioItem = (id: string) => {
+  const removePortfolio = (id: string) => {
     const updated = portfolioItems.filter(i => i.id !== id);
     setPortfolioItems(updated);
     localStorage.setItem("site_portfolio", JSON.stringify(updated));
-  };
-
-  const addTodo = () => {
-    if (!newTodoText.trim()) return;
-    const updated = [...todos, { id: Date.now().toString(), text: newTodoText.trim(), done: false }];
-    setTodos(updated);
-    localStorage.setItem("admin_todos", JSON.stringify(updated));
-    setNewTodoText("");
-  };
-
-  const toggleTodo = (id: string) => {
-    const updated = todos.map(t => t.id === id ? { ...t, done: !t.done } : t);
-    setTodos(updated);
-    localStorage.setItem("admin_todos", JSON.stringify(updated));
-  };
-
-  const removeTodo = (id: string) => {
-    const updated = todos.filter(t => t.id !== id);
-    setTodos(updated);
-    localStorage.setItem("admin_todos", JSON.stringify(updated));
-  };
-
-  const saveCalendar = (val: string) => {
-    setCalendarNote(val);
-    localStorage.setItem("admin_calendar", val);
   };
 
   return (
@@ -759,11 +849,13 @@ function AdminPanel({ onClose }: { onClose: () => void }) {
         <Button variant="station" size="sm" onClick={onClose}><X size={14} /> Cerrar</Button>
       </div>
 
-      <div className="admin-tabs-nav" style={{ display: 'flex', gap: '5px', background: '#0a192f', padding: '8px', borderRadius: '6px', marginBottom: '20px', border: '1px solid #1e3a8a' }}>
+      <div className="admin-tabs-nav" style={{ display: 'flex', gap: '5px', background: '#0a192f', padding: '8px', borderRadius: '6px', marginBottom: '20px', border: '1px solid #1e3a8a', flexWrap: 'wrap' }}>
         <Button variant={activeTab === "envios" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("envios")}>Envíos</Button>
         <Button variant={activeTab === "perfil" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("perfil")}>Perfil</Button>
-        <Button variant={activeTab === "imagenes" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("imagenes")}>Imágenes</Button>
-        <Button variant={activeTab === "emojis" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("emojis")}>Emojis</Button>
+        <Button variant={activeTab === "imagenes" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("imagenes")}>Imágenes del sitio</Button>
+        <Button variant={activeTab === "emojis" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("emojis")}>Emojis imagen</Button>
+        <Button variant={activeTab === "musica" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("musica")}>Música</Button>
+        <Button variant={activeTab === "shimeji" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("shimeji")}>Mascota Shimeji</Button>
         <Button variant={activeTab === "organizador" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("organizador")}>Organizador</Button>
       </div>
 
@@ -819,14 +911,28 @@ function AdminPanel({ onClose }: { onClose: () => void }) {
               <img src={profile.avatar} alt="Profile" style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: '8px', border: '1px solid #1e3a8a', marginBottom: '10px' }} />
               <label className="upload-button" style={{ display: 'block', background: '#1e3a8a', padding: '6px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>
                 <ImageIcon size={14} /> Cambiar foto
-                <input type="file" accept="image/*" onChange={handleProfileAvatarUpload} style={{ display: 'none' }} />
+                <input type="file" accept="image/*" onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = (ev) => {
+                    if (ev.target?.result) {
+                      const updated = { ...profile, avatar: ev.target.result as string };
+                      setProfile(updated);
+                      localStorage.setItem("site_profile", JSON.stringify(updated));
+                    }
+                  };
+                  reader.readAsDataURL(file);
+                }} style={{ display: 'none' }} />
               </label>
             </div>
             <div style={{ flex: 1, minWidth: '250px' }}>
               <label style={{ fontSize: '10px', color: '#69a2ff', textTransform: 'uppercase', letterSpacing: '1px' }}>Nombre de usuario</label>
               <Input value={profile.name} onChange={(e) => setProfile({ ...profile, name: e.target.value })} style={{ marginTop: '8px', marginBottom: '15px' }} />
-              <Button variant="signal" style={{ width: '100%' }} onClick={saveProfileName}>GUARDAR PERFIL</Button>
-              <p style={{ fontSize: '12px', marginTop: '10px', color: '#8892b0' }}>Este nombre y foto aparecerán en comentarios y secciones del sitio.</p>
+              <Button variant="signal" style={{ width: '100%' }} onClick={() => {
+                localStorage.setItem("site_profile", JSON.stringify(profile));
+                alert("¡Perfil guardado!");
+              }}>GUARDAR PERFIL</Button>
             </div>
           </div>
         </div>
@@ -834,7 +940,29 @@ function AdminPanel({ onClose }: { onClose: () => void }) {
 
       {activeTab === "imagenes" && (
         <div style={{ padding: '20px', background: '#0f203b', borderRadius: '8px', border: '1px solid #1e3a8a' }}>
-          <h3 style={{ marginBottom: '15px' }}>Galería del portafolio</h3>
+          <h3 style={{ marginBottom: '15px' }}>Imágenes Independientes del Sitio</h3>
+          <p style={{ color: '#8892b0', fontSize: '13px', marginBottom: '20px' }}>Selecciona una imagen diferente para cada sección:</p>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '15px', marginBottom: '30px' }}>
+            {[
+              { key: "homeProfile", label: "Munchxine_profile.exe (Inicio)" },
+              { key: "homeDirects", label: "Accesos directos (Inicio)" },
+              { key: "homeIntro", label: "Munchxine.txt (Inicio)" },
+              { key: "aboutMain", label: "About / Strawpage" },
+              { key: "credential", label: "Credencial de Contacto" },
+            ].map((item) => (
+              <div key={item.key} style={{ background: '#0a192f', padding: '10px', borderRadius: '8px', border: '1px solid #1e3a8a', textAlign: 'center' }}>
+                <span style={{ fontSize: '12px', display: 'block', marginBottom: '8px' }}>{item.label}</span>
+                <img src={imagesConfig[item.key]} alt="" style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '6px', margin: '0 auto 8px', display: 'block' }} />
+                <label className="upload-button" style={{ background: '#1e3a8a', padding: '5px 10px', borderRadius: '4px', fontSize: '11px', cursor: 'pointer', display: 'inline-block' }}>
+                  Cambiar
+                  <input type="file" accept="image/*" onChange={(e) => handleImgConfigUpload(item.key, e)} style={{ display: 'none' }} />
+                </label>
+              </div>
+            ))}
+          </div>
+
+          <h3 style={{ marginBottom: '15px' }}>Gestión de Portafolio</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
             <Input placeholder="Título de la obra..." value={newArtTitle} onChange={(e) => setNewArtTitle(e.target.value)} />
             <select value={newArtCategory} onChange={(e) => setNewArtCategory(e.target.value)} style={{ background: '#0a192f', color: 'white', padding: '8px', borderRadius: '6px', border: '1px solid #1e3a8a' }}>
@@ -842,24 +970,19 @@ function AdminPanel({ onClose }: { onClose: () => void }) {
               <option value="Doodles">Doodles</option>
               <option value="Renders">Renders</option>
             </select>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-              <label className="upload-button" style={{ background: '#1e3a8a', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', display: 'flex', gap: '6px', fontSize: '13px' }}>
-                <ImageIcon size={14} /> Seleccionar archivo
-                <input type="file" accept="image/*" onChange={handlePortfolioImageUpload} style={{ display: 'none' }} />
-              </label>
-              {newArtImage && <span style={{ color: '#4ade80', fontSize: '12px' }}>✓ Imagen cargada</span>}
-            </div>
-            <Button variant="signal" onClick={addPortfolioItem}>SUBIR OBRA AL PORTAFOLIO</Button>
+            <label className="upload-button" style={{ background: '#1e3a8a', padding: '8px', borderRadius: '6px', cursor: 'pointer', textAlign: 'center' }}>
+              <ImageIcon size={14} /> {newArtImage ? "✓ Imagen seleccionada" : "Elegir archivo de imagen"}
+              <input type="file" accept="image/*" onChange={handlePortfolioUpload} style={{ display: 'none' }} />
+            </label>
+            <Button variant="signal" onClick={addPortfolio}>SUBIR AL PORTAFOLIO</Button>
           </div>
 
-          <h4 style={{ marginBottom: '10px', color: '#69a2ff' }}>Obras actuales</h4>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '15px' }}>
-            {portfolioItems.map((item) => (
-              <div key={item.id} style={{ background: '#0a192f', padding: '10px', borderRadius: '8px', border: '1px solid #1e3a8a' }}>
-                <img src={item.image_path} alt={item.title} style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '4px', marginBottom: '8px' }} />
-                <strong style={{ display: 'block', fontSize: '13px' }}>{item.title}</strong>
-                <span style={{ fontSize: '10px', color: '#8892b0' }}>{item.category}</span>
-                <Button variant="destructive" size="sm" style={{ width: '100%', marginTop: '8px' }} onClick={() => removePortfolioItem(item.id)}><Trash2 size={12} /> Quitar</Button>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '10px' }}>
+            {portfolioItems.map((p) => (
+              <div key={p.id} style={{ background: '#0a192f', padding: '8px', borderRadius: '6px', border: '1px solid #1e3a8a' }}>
+                <img src={p.image_path} alt="" style={{ width: '100%', height: '100px', objectFit: 'cover', borderRadius: '4px', marginBottom: '5px' }} />
+                <strong style={{ fontSize: '12px', display: 'block' }}>{p.title}</strong>
+                <Button variant="destructive" size="sm" style={{ width: '100%', marginTop: '5px' }} onClick={() => removePortfolio(p.id)}>Eliminar</Button>
               </div>
             ))}
           </div>
@@ -868,19 +991,62 @@ function AdminPanel({ onClose }: { onClose: () => void }) {
 
       {activeTab === "emojis" && (
         <div style={{ padding: '20px', background: '#0f203b', borderRadius: '8px', border: '1px solid #1e3a8a' }}>
-          <h3 style={{ marginBottom: '15px' }}>Emojis personalizados</h3>
-          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-            <Input placeholder="Escribe un emoji (ej. 🌟 o texto)..." value={newEmojiInput} onChange={(e) => setNewEmojiInput(e.target.value)} />
+          <h3 style={{ marginBottom: '15px' }}>Emojis Personalizados (En formato de Imagen)</h3>
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
+            <Input placeholder="Nombre (ej. corazon)..." value={newEmojiName} onChange={(e) => setNewEmojiName(e.target.value)} />
+            <label className="upload-button" style={{ background: '#1e3a8a', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <ImageIcon size={14} /> {newEmojiImg ? "✓ Imagen lista" : "Subir icono PNG"}
+              <input type="file" accept="image/*" onChange={handleEmojiUpload} style={{ display: 'none' }} />
+            </label>
             <Button variant="signal" onClick={addEmoji}>AGREGAR EMOJI</Button>
           </div>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             {emojis.map((e, index) => (
-              <div key={index} style={{ position: 'relative', width: '50px', height: '50px', background: '#0a192f', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px', border: '1px solid #1e3a8a', fontSize: '20px' }}>
-                <span>{e}</span>
-                <button onClick={() => removeEmoji(index)} style={{ position: 'absolute', top: '-5px', right: '-5px', background: '#ef4444', borderRadius: '50%', width: '18px', height: '18px', fontSize: '10px', border: 'none', color: 'white', cursor: 'pointer' }}>✕</button>
+              <div key={index} style={{ position: 'relative', width: '60px', height: '60px', background: '#0a192f', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRadius: '6px', border: '1px solid #1e3a8a' }}>
+                <img src={e.url} alt={e.name} width={28} height={28} style={{ objectFit: 'contain' }} />
+                <span style={{ fontSize: '9px', color: '#8892b0' }}>{e.name}</span>
+                <button onClick={() => removeEmoji(index)} style={{ position: 'absolute', top: '-5px', right: '-5px', background: '#ef4444', borderRadius: '50%', width: '16px', height: '16px', fontSize: '9px', border: 'none', color: 'white', cursor: 'pointer' }}>✕</button>
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {activeTab === "musica" && (
+        <div style={{ padding: '20px', background: '#0f203b', borderRadius: '8px', border: '1px solid #1e3a8a' }}>
+          <h3 style={{ marginBottom: '15px' }}><Music size={16} /> Widget de Música (Estilo WinXP)</h3>
+          <p style={{ color: '#8892b0', fontSize: '13px', marginBottom: '15px' }}>Pega el enlace directo a un archivo de audio (MP3 / OGG) o sube uno:</p>
+          <Input placeholder="Título de la canción..." value={music.title} onChange={(e) => setMusic({ ...music, title: e.target.value })} style={{ marginBottom: '10px' }} />
+          <Input placeholder="URL del audio (.mp3 o .ogg)..." value={music.url} onChange={(e) => setMusic({ ...music, url: e.target.value })} style={{ marginBottom: '15px' }} />
+          <Button variant="signal" onClick={() => {
+            localStorage.setItem("site_music", JSON.stringify(music));
+            alert("¡Reproductor de música actualizado!");
+          }}>GUARDAR MÚSICA</Button>
+        </div>
+      )}
+
+      {activeTab === "shimeji" && (
+        <div style={{ padding: '20px', background: '#0f203b', borderRadius: '8px', border: '1px solid #1e3a8a' }}>
+          <h3 style={{ marginBottom: '15px' }}>Mascota Virtual (Shimeji)</h3>
+          <p style={{ color: '#8892b0', fontSize: '13px', marginBottom: '15px' }}>Sube la imagen PNG de tu personaje para que camine y flote por tu pantalla:</p>
+          <img src={shimejiImg} alt="Shimeji preview" width={80} height={80} style={{ objectFit: 'contain', background: '#0a192f', borderRadius: '8px', padding: '5px', marginBottom: '10px', border: '1px solid #1e3a8a' }} />
+          <label className="upload-button" style={{ background: '#1e3a8a', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', display: 'inline-block', marginBottom: '15px' }}>
+            <ImageIcon size={14} /> Seleccionar imagen PNG
+            <input type="file" accept="image/*" onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const reader = new FileReader();
+              reader.onload = (ev) => {
+                if (ev.target?.result) {
+                  const b64 = ev.target.result as string;
+                  setShimejiImg(b64);
+                  localStorage.setItem("site_shimeji_img", b64);
+                  alert("¡Mascota Shimeji actualizada!");
+                }
+              };
+              reader.readAsDataURL(file);
+            }} style={{ display: 'none' }} />
+          </label>
         </div>
       )}
 
@@ -888,21 +1054,42 @@ function AdminPanel({ onClose }: { onClose: () => void }) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
           <div style={{ padding: '20px', background: '#0f203b', borderRadius: '8px', border: '1px solid #1e3a8a' }}>
             <h3 style={{ marginBottom: '15px' }}>🗓️ Calendario / Notas</h3>
-            <Textarea value={calendarNote} onChange={(e) => saveCalendar(e.target.value)} placeholder="Escribe notas o eventos importantes aquí..." style={{ height: '150px' }} />
+            <Textarea value={calendarNote} onChange={(e) => { setCalendarNote(e.target.value); localStorage.setItem("admin_calendar", e.target.value); }} placeholder="Notas importantes..." style={{ height: '150px' }} />
           </div>
           <div style={{ padding: '20px', background: '#0f203b', borderRadius: '8px', border: '1px solid #1e3a8a' }}>
             <h3 style={{ marginBottom: '15px' }}>✅ To-Do List</h3>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '15px' }}>
-              <Input value={newTodoText} onChange={(e) => setNewTodoText(e.target.value)} placeholder="Nueva tarea..." onKeyDown={(e) => { if(e.key === 'Enter') addTodo(); }} />
-              <Button variant="signal" onClick={addTodo}>Añadir</Button>
+              <Input value={newTodoText} onChange={(e) => setNewTodoText(e.target.value)} placeholder="Nueva tarea..." onKeyDown={(e) => {
+                if(e.key === 'Enter' && newTodoText.trim()) {
+                  const updated = [...todos, { id: Date.now().toString(), text: newTodoText.trim(), done: false }];
+                  setTodos(updated);
+                  localStorage.setItem("admin_todos", JSON.stringify(updated));
+                  setNewTodoText("");
+                }
+              }} />
+              <Button variant="signal" onClick={() => {
+                if(!newTodoText.trim()) return;
+                const updated = [...todos, { id: Date.now().toString(), text: newTodoText.trim(), done: false }];
+                setTodos(updated);
+                localStorage.setItem("admin_todos", JSON.stringify(updated));
+                setNewTodoText("");
+              }}>Añadir</Button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '150px', overflowY: 'auto' }}>
               {todos.map((t) => (
                 <div key={t.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0a192f', padding: '6px 10px', borderRadius: '6px' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#caddff', cursor: 'pointer', textDecoration: t.done ? 'line-through' : 'none' }}>
-                    <input type="checkbox" checked={t.done} onChange={() => toggleTodo(t.id)} /> {t.text}
+                    <input type="checkbox" checked={t.done} onChange={() => {
+                      const updated = todos.map(x => x.id === t.id ? { ...x, done: !x.done } : x);
+                      setTodos(updated);
+                      localStorage.setItem("admin_todos", JSON.stringify(updated));
+                    }} /> {t.text}
                   </label>
-                  <button onClick={() => removeTodo(t.id)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}><Trash2 size={12} /></button>
+                  <button onClick={() => {
+                    const updated = todos.filter(x => x.id !== t.id);
+                    setTodos(updated);
+                    localStorage.setItem("admin_todos", JSON.stringify(updated));
+                  }} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}><Trash2 size={12} /></button>
                 </div>
               ))}
             </div>
@@ -914,7 +1101,7 @@ function AdminPanel({ onClose }: { onClose: () => void }) {
 }
 
 function About() {
-  const profile = getStoredProfile();
+  const images = getStoredImagesConfig();
   return (
     <main className="page-shell narrow">
       <div className="page-heading">
@@ -925,12 +1112,12 @@ function About() {
       <div className="about-stack">
         <Window title="ABOUT_TERIDAYO.TXT">
           <div className="about-note">
-            <img src={profile.avatar} alt="Avatar TeriDayo" />
+            <img src={images.aboutMain} alt="Avatar TeriDayo" />
             <p>✨ ¡Haii! Bienvenidos a mi Strawpage personal. Aquí comparto un poco sobre mí, mis gustos y rayones favoritos.</p>
           </div>
         </Window>
         <Window title="INTERESTS.LOG">
-          <div className="large-art"><img src={profile.avatar} alt="Arte pixel de TeriDayo" /></div>
+          <div className="large-art"><img src={images.aboutMain} alt="Arte pixel de TeriDayo" /></div>
         </Window>
       </div>
       <ProfileBand />
@@ -942,6 +1129,7 @@ function Contact() {
   const [open, setOpen] = useState(false);
   const [sent, setSent] = useState(false);
   const profile = getStoredProfile();
+  const images = getStoredImagesConfig();
   return (
     <main className="page-shell narrow">
       <div className="page-heading">
@@ -950,13 +1138,13 @@ function Contact() {
         <p>Haz clic en el póster de credencial para abrir el canal directo con Teri.</p>
       </div>
       <button className="credential-button" onClick={() => setOpen(true)}>
-        <img src={orcaAsset.url} alt="Credencial de orcas" />
+        <img src={images.credential} alt="Credencial de orcas" />
         <span>[ ABRIR CREDENCIAL ]</span>
       </button>
       {open && (
         <Window title="TeriDayo_contact.exe" className="contact-card">
           <div className="contact-identity">
-            <img src={profile.avatar} alt="Avatar" />
+            <img src={images.homeProfile} alt="Avatar" />
             <div>
               <p className="eyebrow">@TeriDayo_</p>
               <h2>{profile.name}</h2>
@@ -1007,6 +1195,8 @@ export function TeriApp() {
       {page === "comunidad" && <Community adminMode={adminMode} />}
       {page === "sobre-mi" && <About />}
       {page === "contacto" && <Contact />}
+      <VirtualShimeji />
+      <MusicWidget />
       <footer className="system-footer"><span>MUNCHINE ONLINE!</span><span>ENLACES VERIFICADOS · ES · 01:23 P.M.</span><div><Play size={12} /> DEEP_SEA_SIGNAL.WAV</div></footer>
       <AdminLoginDialog
         open={adminLoginOpen}
