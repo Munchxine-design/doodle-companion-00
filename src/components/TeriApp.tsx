@@ -110,7 +110,6 @@ function VirtualShimeji() {
   const [isDragging, setIsDragging] = useState(false);
   const frames = getStoredShimejiFrames();
 
-  // Bucle de animación estilo Shimeji
   useEffect(() => {
     if (frames.length <= 1) return;
     const interval = setInterval(() => {
@@ -672,7 +671,7 @@ function Community({ adminMode }: { adminMode: boolean }) {
       id: Date.now().toString(),
       content: comment.trim(),
       author: finalAuthor,
-      approved: adminMode, // Si es admin se aprueba solo, si es usuario queda pendiente o visible según prefieras
+      approved: adminMode,
       is_admin_reply: false,
       parent_id: null,
       created_at: new Date().toISOString(),
@@ -706,7 +705,6 @@ function Community({ adminMode }: { adminMode: boolean }) {
     localStorage.setItem("local_comments", JSON.stringify(updated));
   };
 
-  // Mostrar comentarios aprobados o todos si estamos en modo admin
   const topLevel = comments.filter((c) => !c.parent_id && (c.approved || adminMode));
   const getReplies = (parentId: string) => comments.filter((c) => c.parent_id === parentId);
 
@@ -881,7 +879,7 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
         <Button variant={activeTab === "imagenes" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("imagenes")}>Imágenes del sitio</Button>
         <Button variant={activeTab === "emojis" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("emojis")}>Emojis imagen</Button>
         <Button variant={activeTab === "musica" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("musica")}>Música</Button>
-        <Button variant={activeTab === "shimeji" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("shimeji")}>Mascota Shimeji ZIP</Button>
+        <Button variant={activeTab === "shimeji" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("shimeji")}>Mascota Shimeji Frames</Button>
         <Button variant={activeTab === "organizador" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("organizador")}>Organizador</Button>
       </div>
 
@@ -1052,10 +1050,10 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
 
       {activeTab === "shimeji" && (
         <div style={{ padding: '20px', background: '#0f203b', borderRadius: '8px', border: '1px solid #1e3a8a' }}>
-          <h3 style={{ marginBottom: '15px' }}>Mascota Virtual Animada (Shimeji ZIP)</h3>
-          <p style={{ color: '#8892b0', fontSize: '13px', marginBottom: '15px' }}>Sube múltiples imágenes PNG (frames de animación) o un archivo comprimido de frames para tu Shimeji:</p>
+          <h3 style={{ marginBottom: '15px' }}>Mascota Shimeji (Frames Animados)</h3>
+          <p style={{ color: '#8892b0', fontSize: '13px', marginBottom: '15px' }}>Sube múltiples imágenes PNG (los fotogramas o frames de tu Shimeji):</p>
           <label className="upload-button" style={{ background: '#1e3a8a', padding: '10px 15px', borderRadius: '6px', cursor: 'pointer', display: 'inline-block', marginBottom: '15px' }}>
-            <ImageIcon size={16} /> Subir frames de animación (PNG múltiple)
+            <ImageIcon size={16} /> Seleccionar archivos PNG múltiples
             <input type="file" accept="image/*" multiple onChange={(e) => {
               const files = e.target.files;
               if (!files || files.length === 0) return;
@@ -1070,8 +1068,8 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
                   processed++;
                   if (processed === files.length) {
                     localStorage.setItem("site_shimeji_frames", JSON.stringify(loadedFrames));
-                    setShimejiStatus(`¡${loadedFrames.length} frames cargados para el Shimeji!`);
-                    alert(`¡Shimeji animado configurado con ${loadedFrames.length} fotogramas!`);
+                    setShimejiStatus(`¡${loadedFrames.length} frames cargados con éxito!`);
+                    alert(`¡Shimeji configurado con ${loadedFrames.length} fotogramas!`);
                   }
                 };
                 reader.readAsDataURL(file);
