@@ -63,7 +63,6 @@ type PortfolioItem = {
   image_path: string;
 };
 
-// --- MÉTODOS DE LOCALSTORAGE SEGUROS ---
 const getStoredProfile = () => {
   return JSON.parse(localStorage.getItem("site_profile") || JSON.stringify({ name: "Maxine", avatar: avatarAsset.url }));
 };
@@ -114,42 +113,45 @@ const getStoredShimejiAnimations = () => {
   };
 };
 
-// --- COMPONENTE SHIMEJI CON FÍSICA Y IA INTELIGENTE ---
+// --- COMPONENTE SHIMEJI CON FÍSICA Y CAÍDA REAL ---
 type ShimejiState = "walk" | "fall" | "climb" | "sit" | "laugh" | "click" | "drag";
 
 function VirtualShimeji() {
   const anims = getStoredShimejiAnimations();
   const [state, setState] = useState<ShimejiState>("fall");
   const [pos, setPos] = useState({ x: 100, y: 50 });
-  const [direction, setDirection] = useState<1 | -1>(1); // 1 = derecha, -1 = izquierda
+  const [direction, setDirection] = useState<1 | -1>(1);
   const [frameIndex, setFrameIndex] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+
+  const posRef = useRef(pos);
+  posRef.current = pos;
+  const isDraggingRef = useRef(isDragging);
+  isDraggingRef.current = isDragging;
 
   const dragOffset = useRef({ x: 0, y: 0 });
   const stateTimer = useRef<any>(null);
 
-  // Obtener frames activos según el estado actual
   const getActiveFrames = (): string[] => {
     const list = anims[state];
     if (list && list.length > 0) return list;
-    return [avatarAsset.url];
+    return anims.walk || [avatarAsset.url];
   };
 
   const frames = getActiveFrames();
 
-  // Animador de fotogramas internos
   useEffect(() => {
     const interval = setInterval(() => {
       setFrameIndex((prev) => (prev + 1) % frames.length);
-    }, 180);
+    }, 160);
     return () => clearInterval(interval);
   }, [frames.length]);
 
-  // Máquina de estados e inteligencia artificial del Shimeji
+  // Bucle de físicas del Shimeji
   useEffect(() => {
-    if (isDragging) return;
+    const physicsInterval = setInterval(() => {
+      if (isDraggingRef.current) return;
 
-    const updateLoop = () => {
       setPos((prevPos) => {
         const floorY = window.innerHeight - 80;
         const rightWallX = window.innerWidth - 70;
@@ -159,36 +161,30 @@ function VirtualShimeji() {
         let newY = prevPos.y;
         let currentState = state;
 
-        if (currentState === "fall") {
-          newY += 6;
+        if (currentState === "fall" || currentState === "drag") {
+          newY += 10; // Velocidad de caída
           if (newY >= floorY) {
             newY = floorY;
-            currentState = Math.random() > 0.4 ? "walk" : "sit";
-            if (currentState === "sit") {
-              if (stateTimer.current) clearTimeout(stateTimer.current);
-              stateTimer.current = setTimeout(() => setState("walk"), 4000);
-            }
+            currentState = "walk";
           }
         } else if (currentState === "walk") {
-          newX += direction * 2;
+          newX += direction * 2.5;
           if (newX >= rightWallX) {
             currentState = "climb";
             setDirection(-1);
           } else if (newX <= leftWallX) {
             currentState = "climb";
             setDirection(1);
-          } else if (Math.random() < 0.005) {
-            currentState = "laugh";
+          } else if (Math.random() < 0.004) {
+            currentState = "sit";
             if (stateTimer.current) clearTimeout(stateTimer.current);
-            stateTimer.current = setTimeout(() => setState("walk"), 3000);
+            stateTimer.current = setTimeout(() => setState("walk"), 4000);
           }
         } else if (currentState === "climb") {
-          newY -= 2;
+          newY -= 3;
           if (newY <= 150) {
             currentState = "fall";
           }
-        } else if (currentState === "sit" || currentState === "laugh") {
-          // quieto temporalmente
         }
 
         if (currentState !== state) {
@@ -197,14 +193,38 @@ function VirtualShimeji() {
 
         return { x: newX, y: newY };
       });
+    }, 30);
+
+    return () => clearInterval(physicsInterval);
+  }, [state, direction]);
+
+  // Manejo global de arrastre para garantizar caída instantánea al soltar
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDraggingRef.current) return;
+      setPos({
+        x: e.clientX - dragOffset.current.x,
+        y: e.clientY - dragOffset.current.y,
+      });
     };
 
-    const physicsInterval = setInterval(updateLoop, 30);
-    return () => clearInterval(physicsInterval);
-  }, [state, direction, isDragging]);
+    const handleMouseUp = () => {
+      if (isDraggingRef.current) {
+        setIsDragging(false);
+        setState("fall"); // Activa la caída por gravedad al soltar el cursor
+      }
+    };
 
-  // Manejo de arrastre con cursor (Drag & Drop)
-  const handleMouseDown = (e: PointerEvent<HTMLDivElement>) => {
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, []);
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
     setIsDragging(true);
     setState("drag");
     dragOffset.current = {
@@ -213,39 +233,13 @@ function VirtualShimeji() {
     };
   };
 
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isDragging) return;
-      setPos({
-        x: e.clientX - dragOffset.current.x,
-        y: e.clientY - dragOffset.current.y,
-      });
-    };
-
-    const handleMouseUp = () => {
-      if (isDragging) {
-        setIsDragging(false);
-        setState("fall"); // Al soltar, cae por gravedad hacia el suelo
-      }
-    };
-
-    if (isDragging) {
-      window.addEventListener("mousemove", handleMouseMove);
-      window.addEventListener("mouseup", handleMouseUp);
-    }
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isDragging]);
-
   const handleClick = () => {
     if (isDragging) return;
     setState("click");
     if (stateTimer.current) clearTimeout(stateTimer.current);
     stateTimer.current = setTimeout(() => {
       setState("walk");
-    }, 1500);
+    }, 1200);
   };
 
   return (
@@ -261,9 +255,8 @@ function VirtualShimeji() {
         userSelect: 'none',
         pointerEvents: 'auto',
         transform: direction === -1 ? 'scaleX(-1)' : 'scaleX(1)',
-        transition: isDragging ? 'none' : 'transform 0.1s ease',
       }}
-      onPointerDown={handleMouseDown}
+      onMouseDown={handleMouseDown}
       onClick={handleClick}
       title="¡Mascota Shimeji inteligente! Arrástrame o hazme clic"
     >
@@ -276,10 +269,16 @@ function VirtualShimeji() {
   );
 }
 
-// --- WIDGET DE SPOTIFY AMPLIADO ESTILO WINDOWS XP ---
+// --- WIDGET DE SPOTIFY MOVIBLE CON LÓGICA GLOBAL ---
 function SpotifyWidget() {
   const spotifyUrl = getStoredSpotify();
   const [minimized, setMinimized] = useState(false);
+  const [pos, setPos] = useState({ x: window.innerWidth - 400, y: window.innerHeight - 240 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragRef = useRef({ x: 0, y: 0 });
+
+  const isDraggingRef = useRef(isDragging);
+  isDraggingRef.current = isDragging;
 
   if (!spotifyUrl) return null;
 
@@ -288,10 +287,45 @@ function SpotifyWidget() {
     embedUrl = spotifyUrl.replace("spotify.com/", "spotify.com/embed/");
   }
 
+  useEffect(() => {
+    const handleMove = (e: MouseEvent) => {
+      if (!isDraggingRef.current) return;
+      setPos({
+        x: Math.max(10, Math.min(window.innerWidth - 390, e.clientX - dragRef.current.x)),
+        y: Math.max(10, Math.min(window.innerHeight - 180, e.clientY - dragRef.current.y)),
+      });
+    };
+
+    const handleUp = () => {
+      if (isDraggingRef.current) {
+        setIsDragging(false);
+      }
+    };
+
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+    };
+  }, []);
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(true);
+    dragRef.current = {
+      x: e.clientX - pos.x,
+      y: e.clientY - pos.y,
+    };
+  };
+
   return (
-    <div style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 9997, width: '380px', background: '#ece9d8', border: '2px solid #0055ea', borderRadius: '5px 5px 0 0', boxShadow: '2px 2px 10px rgba(0,0,0,0.5)', fontFamily: 'Tahoma, sans-serif' }}>
-      <div style={{ background: 'linear-gradient(to right, #0055ea, #1690ff)', color: 'white', padding: '4px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', fontWeight: 'bold' }}>
-        <span>🎵 Spotify - WinXP Player</span>
+    <div style={{ position: 'fixed', left: `${pos.x}px`, top: `${pos.y}px`, zIndex: 9997, width: '380px', background: '#ece9d8', border: '2px solid #0055ea', borderRadius: '5px 5px 0 0', boxShadow: '2px 2px 10px rgba(0,0,0,0.5)', fontFamily: 'Tahoma, sans-serif' }}>
+      <div 
+        onMouseDown={handleMouseDown}
+        style={{ background: 'linear-gradient(to right, #0055ea, #1690ff)', color: 'white', padding: '6px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', fontWeight: 'bold', cursor: 'grab', userSelect: 'none' }}
+      >
+        <span>🎵 Spotify - WinXP Player (Arrastrable)</span>
         <button onClick={() => setMinimized(!minimized)} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 'bold' }}>{minimized ? "□" : "_"}</button>
       </div>
       {!minimized && (
@@ -787,7 +821,7 @@ function Community({ adminMode }: { adminMode: boolean }) {
       id: Date.now().toString(),
       content: comment.trim(),
       author: finalAuthor,
-      approved: adminMode ? true : false, // Si es admin se aprueba de inmediato, usuario queda pendiente
+      approved: adminMode ? true : false,
       is_admin_reply: false,
       parent_id: null,
       created_at: new Date().toISOString(),
@@ -822,7 +856,6 @@ function Community({ adminMode }: { adminMode: boolean }) {
     localStorage.setItem("local_comments", JSON.stringify(updated));
   };
 
-  // Mostrar comentarios aprobados o todos si estamos en modo admin
   const topLevel = comments.filter((c) => !c.parent_id && (c.approved || adminMode));
   const getReplies = (parentId: string) => comments.filter((c) => c.parent_id === parentId);
 
@@ -984,7 +1017,6 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
     localStorage.setItem("site_portfolio", JSON.stringify(updated));
   };
 
-  // Carga múltiple de frames para cada animación del Shimeji
   const handleShimejiAnimationUpload = (animKey: keyof typeof shimejiAnims, e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
