@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { supabase } from "@/integrations/supabase/client";
 
 type Page = "inicio" | "portafolio" | "comunidad" | "sobre-mi" | "contacto";
 
@@ -57,13 +56,27 @@ type WallComment = {
   created_at: string;
 };
 
-const customEmojis = [
-  "♡", "✨", "🎨", "💕", "🌟", "🌈", "🥺", "😭", "💖", "🐛",
-  "🫶", "🍰", "☕", "🌙", "⭐", "🌸", "🍀", "🔥", "👾", "🎮",
-  "🐱", "🐳", "🦷", "💀", "✅", "❌", "💙", "🩷", "🧡", "💚",
-];
+type PortfolioItem = {
+  id: string;
+  title: string;
+  category: string;
+  image_path: string;
+};
 
-const ADMIN_DISPLAY_NAME = "Maxine";
+// Funciones globales de estado guardado localmente
+const getStoredProfile = () => {
+  return JSON.parse(localStorage.getItem("site_profile") || JSON.stringify({ name: "Maxine", avatar: avatarAsset.url }));
+};
+
+const getStoredEmojis = () => {
+  return JSON.parse(localStorage.getItem("site_emojis") || JSON.stringify(["♡", "✨", "🎨", "💕", "🌟", "🌈", "🥺", "😭", "💖", "🐛", "🫶", "🍰", "☕", "🌙", "⭐", "🌸", "🍀", "🔥", "👾", "🎮"]));
+};
+
+const getStoredPortfolio = () => {
+  return JSON.parse(localStorage.getItem("site_portfolio") || JSON.stringify([
+    { id: "1", title: "MEGAMAN!!!", category: "Drawings", image_path: avatarAsset.url }
+  ]));
+};
 
 function Window({ title, children, className = "" }: { title: string; children: React.ReactNode; className?: string }) {
   return (
@@ -160,7 +173,7 @@ function TabletExperience({ setPage }: { setPage: (page: Page) => void }) {
                 <div className="screen-grid" />
                 <div className={`stage-art sketch ${stage === 0 ? "visible" : ""}`}><AvatarBlueprint mode="sketch" /></div>
                 <div className={`stage-art lineart ${stage === 1 ? "visible" : ""}`}><AvatarBlueprint mode="line" /></div>
-                <div className={`stage-art final ${stage === 2 ? "visible" : ""}`}><img src={avatarAsset.url} alt="Ilustración final de Teri" /></div>
+                <div className={`stage-art final ${stage === 2 ? "visible" : ""}`}><img src={getStoredProfile().avatar} alt="Ilustración final de Teri" /></div>
                 <div className="screen-readout"><span>ACTIVE_LAYER: 0{stage + 1}_{["SKETCH", "LINEART", "RENDER"][stage]}</span><span>PRESSURE: {Math.round(52 + progress * 35)}%</span><span>STYLUS: CONNECTED</span></div>
                 <div className="stylus" style={{ left: `${penX}%`, top: `${penY}%` }}><span /></div>
               </div>
@@ -182,21 +195,54 @@ function AvatarBlueprint({ mode }: { mode: "sketch" | "line" }) {
 }
 
 function ProfileBand() {
+  const profile = getStoredProfile();
   return (
     <section className="profile-band">
-      <Window title="Munchxine_profile.exe"><div className="profile-content"><img src={avatarAsset.url} alt="Avatar pixel art de TeriDayo" /><div><p className="eyebrow">HIYAAA!!</p><h2>Maxine/ Munchy / Moopy</h2><p>Artista chileno de 19 años • Arte 2D y 3D • ESP / ENG</p><div className="tags"><span>Roblox</span><span>ARGs</span><span>Pokemon</span></div></div></div></Window>
-      <Window title="ACCESOS_DIRECTOS"><div className="online-content"><h2>Maxine Online!</h2><div className="social-row"><Button variant="station"><X /> Twitter / X</Button><Button variant="station"><Coffee /> Ko-fi</Button></div><div className="online-art"><img src={avatarAsset.url} alt="Teri online" /><span>@Munchxine_</span></div></div></Window>
+      <Window title="Munchxine_profile.exe"><div className="profile-content"><img src={profile.avatar} alt="Avatar pixel art de TeriDayo" /><div><p className="eyebrow">HIYAAA!!</p><h2>{profile.name}</h2><p>Artista chileno de 19 años • Arte 2D y 3D • ESP / ENG</p><div className="tags"><span>Roblox</span><span>ARGs</span><span>Pokemon</span></div></div></div></Window>
+      <Window title="ACCESOS_DIRECTOS"><div className="online-content"><h2>Maxine Online!</h2><div className="social-row"><Button variant="station"><X /> Twitter / X</Button><Button variant="station"><Coffee /> Ko-fi</Button></div><div className="online-art"><img src={profile.avatar} alt="Teri online" /><span>@Munchxine_</span></div></div></Window>
     </section>
   );
 }
 
 function Home({ setPage }: { setPage: (page: Page) => void }) {
-  return <><TabletExperience setPage={setPage} /><section className="intro-band"><Window title="Munchxine.txt"><div className="intro-copy"><img src={avatarAsset.url} alt="Avatar de Teri" /><div><p className="eyebrow">WELCOME_NOTE.LOG</p><h2>¡Haii! Mi nombre es Maxine.</h2><p>Soy un artista digital enfocado en el arte 2D, tando ilustracion como modelos Vtuber/Pngtuber. </p></div></div></Window></section><ProfileBand /></>;
+  const profile = getStoredProfile();
+  return <><TabletExperience setPage={setPage} /><section className="intro-band"><Window title="Munchxine.txt"><div className="intro-copy"><img src={profile.avatar} alt="Avatar de Teri" /><div><p className="eyebrow">WELCOME_NOTE.LOG</p><h2>¡Haii! Mi nombre es {profile.name}.</h2><p>Soy un artista digital enfocado en el arte 2D, tando ilustracion como modelos Vtuber/Pngtuber. </p></div></div></Window></section><ProfileBand /></>;
 }
 
 function Portfolio() {
   const [category, setCategory] = useState("Todas las obras");
-  return <main className="page-shell"><div className="page-heading"><p className="eyebrow">ARCHIVE://VISUAL_WORKS</p><h1>Portafolio de arte</h1><p>Dibujos, GIFs, videos, ideas y universos guardados en carpetas.</p></div><div className="portfolio-layout"><Window title="Carpetas de Maxine" className="folder-window">{["Todas las obras", "Drawings", "Doodles", "Renders"].map((name) => <Button key={name} variant={category === name ? "signal" : "station"} onClick={() => setCategory(name)}><Folder />{name}</Button>)}</Window><Window title={category} className="gallery-window"><div className="gallery-grid"><article className="art-card"><div className="art-preview"><img src={avatarAsset.url} alt="MEGAMAN" /></div><strong>MEGAMAN!!!</strong><span>DIGITAL_ARCHIVE_001</span></article></div></Window></div><ProfileBand /></main>;
+  const items: PortfolioItem[] = getStoredPortfolio();
+  
+  const filtered = category === "Todas las obras" ? items : items.filter(i => i.category === category);
+
+  return (
+    <main className="page-shell">
+      <div className="page-heading"><p className="eyebrow">ARCHIVE://VISUAL_WORKS</p><h1>Portafolio de arte</h1><p>Dibujos, GIFs, videos, ideas y universos guardados en carpetas.</p></div>
+      <div className="portfolio-layout">
+        <Window title="Carpetas de Maxine" className="folder-window">
+          {["Todas las obras", "Drawings", "Doodles", "Renders"].map((name) => (
+            <Button key={name} variant={category === name ? "signal" : "station"} onClick={() => setCategory(name)}><Folder />{name}</Button>
+          ))}
+        </Window>
+        <Window title={category} className="gallery-window">
+          <div className="gallery-grid">
+            {filtered.length === 0 ? (
+              <p className="window-copy">No hay obras en esta categoría.</p>
+            ) : (
+              filtered.map((item) => (
+                <article className="art-card" key={item.id}>
+                  <div className="art-preview"><img src={item.image_path} alt={item.title} /></div>
+                  <strong>{item.title}</strong>
+                  <span>{item.category.toUpperCase()}</span>
+                </article>
+              ))
+            )}
+          </div>
+        </Window>
+      </div>
+      <ProfileBand />
+    </main>
+  );
 }
 
 function PaintCanvas() {
@@ -295,7 +341,6 @@ function PaintCanvas() {
 
       const dataUrl = canvas.toDataURL("image/png");
       
-      // Respaldo local funcional para pruebas inmediatas sin errores de red
       const localSubs = JSON.parse(localStorage.getItem("local_submissions") || "[]");
       localSubs.unshift({
         id: Date.now().toString(),
@@ -395,10 +440,11 @@ function GalleryDisplay() {
   );
 }
 
-function CommentThread({ comment, replies, adminMode, onReply, onDelete }: {
+function CommentThread({ comment, replies, adminMode, customEmojis, onReply, onDelete }: {
   comment: WallComment;
   replies: WallComment[];
   adminMode: boolean;
+  customEmojis: string[];
   onReply: (parentId: string, content: string, isAdmin: boolean) => void;
   onDelete: (id: string) => void;
 }) {
@@ -471,6 +517,8 @@ function Community({ adminMode }: { adminMode: boolean }) {
   const [author, setAuthor] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [loading, setLoading] = useState(true);
+  const profile = getStoredProfile();
+  const customEmojis = getStoredEmojis();
 
   useEffect(() => {
     const local = JSON.parse(localStorage.getItem("local_comments") || "[]");
@@ -480,7 +528,7 @@ function Community({ adminMode }: { adminMode: boolean }) {
 
   const sendComment = () => {
     if (!comment.trim()) return;
-    const finalAuthor = adminMode ? (author.trim() || ADMIN_DISPLAY_NAME) : "Anónimo";
+    const finalAuthor = adminMode ? (author.trim() || profile.name) : "Anónimo";
     const newC: WallComment = {
       id: Date.now().toString(),
       content: comment.trim(),
@@ -497,7 +545,7 @@ function Community({ adminMode }: { adminMode: boolean }) {
   };
 
   const sendReply = (parentId: string, content: string, isAdmin: boolean) => {
-    const replyAuthor = isAdmin ? ADMIN_DISPLAY_NAME : "Anónimo";
+    const replyAuthor = isAdmin ? profile.name : "Anónimo";
     const newReply: WallComment = {
       id: Date.now().toString(),
       content,
@@ -532,8 +580,8 @@ function Community({ adminMode }: { adminMode: boolean }) {
         <Window title="Muro de Maxine" className="wall">
           <article className="post">
             <div className="post-author">
-              <img src={avatarAsset.url} alt="Teri" />
-              <div><strong>Maxine <small>ADMIN / DEV :3C</small></strong><span>14 sept 2026, 0:24</span></div>
+              <img src={profile.avatar} alt="Teri" />
+              <div><strong>{profile.name} <small>ADMIN / DEV :3C</small></strong><span>14 sept 2026, 0:24</span></div>
             </div>
             <p>¡Haii! Bienvenidos al muro oficial de la web.</p>
           </article>
@@ -545,6 +593,7 @@ function Community({ adminMode }: { adminMode: boolean }) {
               comment={c}
               replies={getReplies(c.id)}
               adminMode={adminMode}
+              customEmojis={customEmojis}
               onReply={sendReply}
               onDelete={deleteComment}
             />
@@ -556,7 +605,7 @@ function Community({ adminMode }: { adminMode: boolean }) {
             <button className="emoji-toggle" onClick={() => setShowEmojiPicker(!showEmojiPicker)}><Smile size={16} /> Emojis personalizados</button>
             {showEmojiPicker && (
               <div className="emoji-picker">
-                {customEmojis.map((emoji) => (
+                {customEmojis.map((emoji: string) => (
                   <button key={emoji} className="emoji-btn" onClick={() => setComment(comment + emoji)}>{emoji}</button>
                 ))}
               </div>
@@ -584,32 +633,123 @@ function Community({ adminMode }: { adminMode: boolean }) {
 function AdminPanel({ onClose }: { onClose: () => void }) {
   const [activeTab, setActiveTab] = useState<"envios" | "perfil" | "imagenes" | "emojis" | "organizador">("envios");
   const [submissions, setSubmissions] = useState<Submission[]>([]);
+  
+  // Perfil state
+  const [profile, setProfile] = useState(getStoredProfile());
+  
+  // Emojis state
+  const [emojis, setEmojis] = useState<string[]>(getStoredEmojis());
+  const [newEmojiInput, setNewEmojiInput] = useState("");
 
-  const loadSubmissions = () => {
-    const local = JSON.parse(localStorage.getItem("local_submissions") || "[]");
-    setSubmissions(local);
-  };
+  // Portafolio state
+  const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>(getStoredPortfolio());
+  const [newArtTitle, setNewArtTitle] = useState("");
+  const [newArtCategory, setNewArtCategory] = useState("Drawings");
+  const [newArtImage, setNewArtImage] = useState("");
+
+  // Todo / Calendar state
+  const [todos, setTodos] = useState<{ id: string; text: string; done: boolean }[]>(() => JSON.parse(localStorage.getItem("admin_todos") || "[]"));
+  const [newTodoText, setNewTodoText] = useState("");
+  const [calendarNote, setCalendarNote] = useState(() => localStorage.getItem("admin_calendar") || "");
 
   useEffect(() => {
-    loadSubmissions();
+    const local = JSON.parse(localStorage.getItem("local_submissions") || "[]");
+    setSubmissions(local);
   }, []);
 
-  const approve = (id: string) => {
-    const updated = submissions.map((s) => s.id === id ? { ...s, approved: true } : s);
-    setSubmissions(updated);
-    localStorage.setItem("local_submissions", JSON.stringify(updated));
+  const handleProfileAvatarUpload = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      if (ev.target?.result) {
+        const updated = { ...profile, avatar: ev.target.result as string };
+        setProfile(updated);
+        localStorage.setItem("site_profile", JSON.stringify(updated));
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
-  const unapprove = (id: string) => {
-    const updated = submissions.map((s) => s.id === id ? { ...s, approved: false } : s);
-    setSubmissions(updated);
-    localStorage.setItem("local_submissions", JSON.stringify(updated));
+  const saveProfileName = () => {
+    localStorage.setItem("site_profile", JSON.stringify(profile));
+    alert("¡Perfil actualizado con éxito!");
   };
 
-  const remove = (id: string) => {
-    const updated = submissions.filter((s) => s.id !== id);
-    setSubmissions(updated);
-    localStorage.setItem("local_submissions", JSON.stringify(updated));
+  const addEmoji = () => {
+    if (!newEmojiInput.trim()) return;
+    const updated = [...emojis, newEmojiInput.trim()];
+    setEmojis(updated);
+    localStorage.setItem("site_emojis", JSON.stringify(updated));
+    setNewEmojiInput("");
+  };
+
+  const removeEmoji = (index: number) => {
+    const updated = emojis.filter((_, i) => i !== index);
+    setEmojis(updated);
+    localStorage.setItem("site_emojis", JSON.stringify(updated));
+  };
+
+  const handlePortfolioImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      if (ev.target?.result) {
+        setNewArtImage(ev.target.result as string);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const addPortfolioItem = () => {
+    if (!newArtTitle.trim() || !newArtImage) {
+      alert("Por favor ingresa un título y selecciona una imagen.");
+      return;
+    }
+    const newItem: PortfolioItem = {
+      id: Date.now().toString(),
+      title: newArtTitle.trim(),
+      category: newArtCategory,
+      image_path: newArtImage,
+    };
+    const updated = [newItem, ...portfolioItems];
+    setPortfolioItems(updated);
+    localStorage.setItem("site_portfolio", JSON.stringify(updated));
+    setNewArtTitle("");
+    setNewArtImage("");
+    alert("¡Obra subida al portafolio!");
+  };
+
+  const removePortfolioItem = (id: string) => {
+    const updated = portfolioItems.filter(i => i.id !== id);
+    setPortfolioItems(updated);
+    localStorage.setItem("site_portfolio", JSON.stringify(updated));
+  };
+
+  const addTodo = () => {
+    if (!newTodoText.trim()) return;
+    const updated = [...todos, { id: Date.now().toString(), text: newTodoText.trim(), done: false }];
+    setTodos(updated);
+    localStorage.setItem("admin_todos", JSON.stringify(updated));
+    setNewTodoText("");
+  };
+
+  const toggleTodo = (id: string) => {
+    const updated = todos.map(t => t.id === id ? { ...t, done: !t.done } : t);
+    setTodos(updated);
+    localStorage.setItem("admin_todos", JSON.stringify(updated));
+  };
+
+  const removeTodo = (id: string) => {
+    const updated = todos.filter(t => t.id !== id);
+    setTodos(updated);
+    localStorage.setItem("admin_todos", JSON.stringify(updated));
+  };
+
+  const saveCalendar = (val: string) => {
+    setCalendarNote(val);
+    localStorage.setItem("admin_calendar", val);
   };
 
   return (
@@ -647,11 +787,23 @@ function AdminPanel({ onClose }: { onClose: () => void }) {
                 </div>
                 <div className="admin-card-actions">
                   {!s.approved ? (
-                    <Button variant="signal" size="sm" onClick={() => approve(s.id)}><Check size={14} /> Aprobar</Button>
+                    <Button variant="signal" size="sm" onClick={() => {
+                      const updated = submissions.map(sub => sub.id === s.id ? { ...sub, approved: true } : sub);
+                      setSubmissions(updated);
+                      localStorage.setItem("local_submissions", JSON.stringify(updated));
+                    }}><Check size={14} /> Aprobar</Button>
                   ) : (
-                    <Button variant="station" size="sm" onClick={() => unapprove(s.id)}><Eye size={14} /> Ocultar</Button>
+                    <Button variant="station" size="sm" onClick={() => {
+                      const updated = submissions.map(sub => sub.id === s.id ? { ...sub, approved: false } : sub);
+                      setSubmissions(updated);
+                      localStorage.setItem("local_submissions", JSON.stringify(updated));
+                    }}><Eye size={14} /> Ocultar</Button>
                   )}
-                  <Button variant="destructive" size="sm" onClick={() => remove(s.id)}><Trash2 size={14} /> Eliminar</Button>
+                  <Button variant="destructive" size="sm" onClick={() => {
+                    const updated = submissions.filter(sub => sub.id !== s.id);
+                    setSubmissions(updated);
+                    localStorage.setItem("local_submissions", JSON.stringify(updated));
+                  }}><Trash2 size={14} /> Eliminar</Button>
                 </div>
               </article>
             ))}
@@ -663,14 +815,18 @@ function AdminPanel({ onClose }: { onClose: () => void }) {
         <div style={{ padding: '20px', background: '#0f203b', borderRadius: '8px', border: '1px solid #1e3a8a' }}>
           <h3 style={{ marginBottom: '20px' }}>Datos de perfil</h3>
           <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-            <div style={{ width: '150px' }}>
-              <img src={avatarAsset.url} alt="Profile" style={{ width: '100%', borderRadius: '8px', border: '1px solid #1e3a8a' }} />
-              <Button variant="station" size="sm" style={{ marginTop: '10px', width: '100%' }}>Cambiar foto</Button>
+            <div style={{ width: '150px', textAlign: 'center' }}>
+              <img src={profile.avatar} alt="Profile" style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: '8px', border: '1px solid #1e3a8a', marginBottom: '10px' }} />
+              <label className="upload-button" style={{ display: 'block', background: '#1e3a8a', padding: '6px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>
+                <ImageIcon size={14} /> Cambiar foto
+                <input type="file" accept="image/*" onChange={handleProfileAvatarUpload} style={{ display: 'none' }} />
+              </label>
             </div>
             <div style={{ flex: 1, minWidth: '250px' }}>
               <label style={{ fontSize: '10px', color: '#69a2ff', textTransform: 'uppercase', letterSpacing: '1px' }}>Nombre de usuario</label>
-              <Input defaultValue={ADMIN_DISPLAY_NAME} style={{ marginTop: '8px', marginBottom: '15px' }} />
-              <Button variant="signal" style={{ width: '100%' }}>GUARDAR PERFIL</Button>
+              <Input value={profile.name} onChange={(e) => setProfile({ ...profile, name: e.target.value })} style={{ marginTop: '8px', marginBottom: '15px' }} />
+              <Button variant="signal" style={{ width: '100%' }} onClick={saveProfileName}>GUARDAR PERFIL</Button>
+              <p style={{ fontSize: '12px', marginTop: '10px', color: '#8892b0' }}>Este nombre y foto aparecerán en comentarios y secciones del sitio.</p>
             </div>
           </div>
         </div>
@@ -678,18 +834,50 @@ function AdminPanel({ onClose }: { onClose: () => void }) {
 
       {activeTab === "imagenes" && (
         <div style={{ padding: '20px', background: '#0f203b', borderRadius: '8px', border: '1px solid #1e3a8a' }}>
-          <h3 style={{ marginBottom: '15px' }}>Imágenes del sitio</h3>
-          <p style={{ color: '#8892b0', fontSize: '14px' }}>Gestión de recursos gráficos de Maxine.</p>
+          <h3 style={{ marginBottom: '15px' }}>Galería del portafolio</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+            <Input placeholder="Título de la obra..." value={newArtTitle} onChange={(e) => setNewArtTitle(e.target.value)} />
+            <select value={newArtCategory} onChange={(e) => setNewArtCategory(e.target.value)} style={{ background: '#0a192f', color: 'white', padding: '8px', borderRadius: '6px', border: '1px solid #1e3a8a' }}>
+              <option value="Drawings">Drawings</option>
+              <option value="Doodles">Doodles</option>
+              <option value="Renders">Renders</option>
+            </select>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <label className="upload-button" style={{ background: '#1e3a8a', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', display: 'flex', gap: '6px', fontSize: '13px' }}>
+                <ImageIcon size={14} /> Seleccionar archivo
+                <input type="file" accept="image/*" onChange={handlePortfolioImageUpload} style={{ display: 'none' }} />
+              </label>
+              {newArtImage && <span style={{ color: '#4ade80', fontSize: '12px' }}>✓ Imagen cargada</span>}
+            </div>
+            <Button variant="signal" onClick={addPortfolioItem}>SUBIR OBRA AL PORTAFOLIO</Button>
+          </div>
+
+          <h4 style={{ marginBottom: '10px', color: '#69a2ff' }}>Obras actuales</h4>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '15px' }}>
+            {portfolioItems.map((item) => (
+              <div key={item.id} style={{ background: '#0a192f', padding: '10px', borderRadius: '8px', border: '1px solid #1e3a8a' }}>
+                <img src={item.image_path} alt={item.title} style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '4px', marginBottom: '8px' }} />
+                <strong style={{ display: 'block', fontSize: '13px' }}>{item.title}</strong>
+                <span style={{ fontSize: '10px', color: '#8892b0' }}>{item.category}</span>
+                <Button variant="destructive" size="sm" style={{ width: '100%', marginTop: '8px' }} onClick={() => removePortfolioItem(item.id)}><Trash2 size={12} /> Quitar</Button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
       {activeTab === "emojis" && (
         <div style={{ padding: '20px', background: '#0f203b', borderRadius: '8px', border: '1px solid #1e3a8a' }}>
           <h3 style={{ marginBottom: '15px' }}>Emojis personalizados</h3>
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+            <Input placeholder="Escribe un emoji (ej. 🌟 o texto)..." value={newEmojiInput} onChange={(e) => setNewEmojiInput(e.target.value)} />
+            <Button variant="signal" onClick={addEmoji}>AGREGAR EMOJI</Button>
+          </div>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            {customEmojis.map((e) => (
-              <div key={e} style={{ position: 'relative', width: '40px', height: '40px', background: '#0a192f', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px', border: '1px solid #1e3a8a' }}>
+            {emojis.map((e, index) => (
+              <div key={index} style={{ position: 'relative', width: '50px', height: '50px', background: '#0a192f', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px', border: '1px solid #1e3a8a', fontSize: '20px' }}>
                 <span>{e}</span>
+                <button onClick={() => removeEmoji(index)} style={{ position: 'absolute', top: '-5px', right: '-5px', background: '#ef4444', borderRadius: '50%', width: '18px', height: '18px', fontSize: '10px', border: 'none', color: 'white', cursor: 'pointer' }}>✕</button>
               </div>
             ))}
           </div>
@@ -699,14 +887,25 @@ function AdminPanel({ onClose }: { onClose: () => void }) {
       {activeTab === "organizador" && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
           <div style={{ padding: '20px', background: '#0f203b', borderRadius: '8px', border: '1px solid #1e3a8a' }}>
-            <h3 style={{ marginBottom: '15px' }}>🗓️ Calendario</h3>
-            <div style={{ background: '#0a192f', height: '150px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8892b0' }}>
-              [ Calendario Notion ]
-            </div>
+            <h3 style={{ marginBottom: '15px' }}>🗓️ Calendario / Notas</h3>
+            <Textarea value={calendarNote} onChange={(e) => saveCalendar(e.target.value)} placeholder="Escribe notas o eventos importantes aquí..." style={{ height: '150px' }} />
           </div>
           <div style={{ padding: '20px', background: '#0f203b', borderRadius: '8px', border: '1px solid #1e3a8a' }}>
             <h3 style={{ marginBottom: '15px' }}>✅ To-Do List</h3>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#caddff' }}><input type="checkbox" defaultChecked /> Terminar ilustraciones VRChat</label>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '15px' }}>
+              <Input value={newTodoText} onChange={(e) => setNewTodoText(e.target.value)} placeholder="Nueva tarea..." onKeyDown={(e) => { if(e.key === 'Enter') addTodo(); }} />
+              <Button variant="signal" onClick={addTodo}>Añadir</Button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '150px', overflowY: 'auto' }}>
+              {todos.map((t) => (
+                <div key={t.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0a192f', padding: '6px 10px', borderRadius: '6px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#caddff', cursor: 'pointer', textDecoration: t.done ? 'line-through' : 'none' }}>
+                    <input type="checkbox" checked={t.done} onChange={() => toggleTodo(t.id)} /> {t.text}
+                  </label>
+                  <button onClick={() => removeTodo(t.id)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}><Trash2 size={12} /></button>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -715,12 +914,34 @@ function AdminPanel({ onClose }: { onClose: () => void }) {
 }
 
 function About() {
-  return <main className="page-shell narrow"><div className="page-heading"><p className="eyebrow">PROFILE://ABOUT</p><h1>Sobre Mí.</h1><p>Mi pequeño rincón personal estilo Strawpage</p></div><div className="about-stack"><Window title="ABOUT_TERIDAYO.TXT"><div className="about-note"><img src={avatarAsset.url} alt="Avatar TeriDayo" /><p>✨ ¡Haii! Bienvenidos a mi Strawpage personal. Aquí comparto un poco sobre mí, mis gustos y rayones favoritos.</p></div></Window><Window title="INTERESTS.LOG"><div className="large-art"><img src={avatarAsset.url} alt="Arte pixel de TeriDayo" /></div></Window></div><ProfileBand /></main>;
+  const profile = getStoredProfile();
+  return (
+    <main className="page-shell narrow">
+      <div className="page-heading">
+        <p className="eyebrow">PROFILE://ABOUT</p>
+        <h1>Sobre Mí.</h1>
+        <p>Mi pequeño rincón personal estilo Strawpage</p>
+      </div>
+      <div className="about-stack">
+        <Window title="ABOUT_TERIDAYO.TXT">
+          <div className="about-note">
+            <img src={profile.avatar} alt="Avatar TeriDayo" />
+            <p>✨ ¡Haii! Bienvenidos a mi Strawpage personal. Aquí comparto un poco sobre mí, mis gustos y rayones favoritos.</p>
+          </div>
+        </Window>
+        <Window title="INTERESTS.LOG">
+          <div className="large-art"><img src={profile.avatar} alt="Arte pixel de TeriDayo" /></div>
+        </Window>
+      </div>
+      <ProfileBand />
+    </main>
+  );
 }
 
 function Contact() {
   const [open, setOpen] = useState(false);
   const [sent, setSent] = useState(false);
+  const profile = getStoredProfile();
   return (
     <main className="page-shell narrow">
       <div className="page-heading">
@@ -735,10 +956,10 @@ function Contact() {
       {open && (
         <Window title="TeriDayo_contact.exe" className="contact-card">
           <div className="contact-identity">
-            <img src={avatarAsset.url} alt="Avatar" />
+            <img src={profile.avatar} alt="Avatar" />
             <div>
               <p className="eyebrow">@TeriDayo_</p>
-              <h2>Anthony Benjamin "TeriDayo"</h2>
+              <h2>{profile.name}</h2>
               <p>Artista digital 2D + modelador 3D (ESP / ENG)</p>
             </div>
           </div>
