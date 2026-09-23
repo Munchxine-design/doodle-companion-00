@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent, type ChangeEvent } from "react";
-import { Brush, Check, ChevronDown, Coffee, CornerDownRight, Eraser, Eye, Folder, Image as ImageIcon, LockKeyhole, Menu, MessageCircle, Minus, Orbit, Paintbrush, Play, RotateCcw, Send, Smile, Sparkles, Square, Trash2, X, Music, LogOut } from "lucide-react";
+import { Brush, Check, ChevronDown, Coffee, CornerDownRight, Eraser, Eye, Folder, Image as ImageIcon, LockKeyhole, Menu, MessageCircle, Minus, Orbit, Paintbrush, Play, RotateCcw, Send, Smile, Sparkles, Square, Trash2, X, Music, LogOut, Terminal } from "lucide-react";
 import avatarAsset from "@/assets/teridayo-avatar.png.asset.json";
 import orcaAsset from "@/assets/orca-credential.jpg.asset.json";
 import { Button } from "@/components/ui/button";
@@ -94,153 +94,27 @@ const getStoredSpotify = () => {
   return localStorage.getItem("site_spotify_url") || "";
 };
 
-const getStoredShimejiAnimations = () => {
-  const defaultImg = avatarAsset.url;
-  const saved = localStorage.getItem("site_shimeji_animations");
+const getStoredShimejiFrames = (): string[] => {
+  const saved = localStorage.getItem("site_shimeji_frames");
   if (saved) {
-    try {
-      return JSON.parse(saved);
-    } catch { /* fallback */ }
+    try { return JSON.parse(saved); } catch { /* fallback */ }
   }
-  return {
-    walk: [defaultImg],
-    fall: [defaultImg],
-    climb: [defaultImg],
-    sit: [defaultImg],
-    laugh: [defaultImg],
-    click: [defaultImg],
-    drag: [defaultImg],
-  };
+  return [avatarAsset.url];
 };
 
-// --- COMPONENTE SHIMEJI CON FÍSICA Y CAÍDA REAL ---
-type ShimejiState = "walk" | "fall" | "climb" | "sit" | "laugh" | "click" | "drag";
-
+// --- COMPONENTE SHIMEJI SIMPLE Y ESTABLE ---
 function VirtualShimeji() {
-  const anims = getStoredShimejiAnimations();
-  const [state, setState] = useState<ShimejiState>("fall");
-  const [pos, setPos] = useState({ x: 100, y: 50 });
-  const [direction, setDirection] = useState<1 | -1>(1);
+  const [pos, setPos] = useState({ x: 80, y: window.innerHeight - 110 });
   const [frameIndex, setFrameIndex] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-
-  const posRef = useRef(pos);
-  posRef.current = pos;
-  const isDraggingRef = useRef(isDragging);
-  isDraggingRef.current = isDragging;
-
-  const dragOffset = useRef({ x: 0, y: 0 });
-  const stateTimer = useRef<any>(null);
-
-  const getActiveFrames = (): string[] => {
-    const list = anims[state];
-    if (list && list.length > 0) return list;
-    return anims.walk || [avatarAsset.url];
-  };
-
-  const frames = getActiveFrames();
+  const frames = getStoredShimejiFrames();
 
   useEffect(() => {
+    if (frames.length <= 1) return;
     const interval = setInterval(() => {
       setFrameIndex((prev) => (prev + 1) % frames.length);
-    }, 160);
+    }, 250);
     return () => clearInterval(interval);
   }, [frames.length]);
-
-  // Bucle de físicas del Shimeji
-  useEffect(() => {
-    const physicsInterval = setInterval(() => {
-      if (isDraggingRef.current) return;
-
-      setPos((prevPos) => {
-        const floorY = window.innerHeight - 80;
-        const rightWallX = window.innerWidth - 70;
-        const leftWallX = 10;
-
-        let newX = prevPos.x;
-        let newY = prevPos.y;
-        let currentState = state;
-
-        if (currentState === "fall" || currentState === "drag") {
-          newY += 10; // Velocidad de caída
-          if (newY >= floorY) {
-            newY = floorY;
-            currentState = "walk";
-          }
-        } else if (currentState === "walk") {
-          newX += direction * 2.5;
-          if (newX >= rightWallX) {
-            currentState = "climb";
-            setDirection(-1);
-          } else if (newX <= leftWallX) {
-            currentState = "climb";
-            setDirection(1);
-          } else if (Math.random() < 0.004) {
-            currentState = "sit";
-            if (stateTimer.current) clearTimeout(stateTimer.current);
-            stateTimer.current = setTimeout(() => setState("walk"), 4000);
-          }
-        } else if (currentState === "climb") {
-          newY -= 3;
-          if (newY <= 150) {
-            currentState = "fall";
-          }
-        }
-
-        if (currentState !== state) {
-          setState(currentState);
-        }
-
-        return { x: newX, y: newY };
-      });
-    }, 30);
-
-    return () => clearInterval(physicsInterval);
-  }, [state, direction]);
-
-  // Manejo global de arrastre para garantizar caída instantánea al soltar
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isDraggingRef.current) return;
-      setPos({
-        x: e.clientX - dragOffset.current.x,
-        y: e.clientY - dragOffset.current.y,
-      });
-    };
-
-    const handleMouseUp = () => {
-      if (isDraggingRef.current) {
-        setIsDragging(false);
-        setState("fall"); // Activa la caída por gravedad al soltar el cursor
-      }
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, []);
-
-  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(true);
-    setState("drag");
-    dragOffset.current = {
-      x: e.clientX - pos.x,
-      y: e.clientY - pos.y,
-    };
-  };
-
-  const handleClick = () => {
-    if (isDragging) return;
-    setState("click");
-    if (stateTimer.current) clearTimeout(stateTimer.current);
-    stateTimer.current = setTimeout(() => {
-      setState("walk");
-    }, 1200);
-  };
 
   return (
     <div
@@ -249,27 +123,77 @@ function VirtualShimeji() {
         left: `${pos.x}px`,
         top: `${pos.y}px`,
         zIndex: 9998,
-        cursor: isDragging ? 'grabbing' : 'grab',
         width: '64px',
         height: '64px',
         userSelect: 'none',
-        pointerEvents: 'auto',
-        transform: direction === -1 ? 'scaleX(-1)' : 'scaleX(1)',
+        pointerEvents: 'none',
       }}
-      onMouseDown={handleMouseDown}
-      onClick={handleClick}
-      title="¡Mascota Shimeji inteligente! Arrástrame o hazme clic"
+      title="¡Mascota Shimeji!"
     >
       <img 
-        src={frames[frameIndex % frames.length] || frames[0]} 
+        src={frames[frameIndex] || frames[0]} 
         alt="Shimeji" 
-        style={{ width: '100%', height: '100%', objectFit: 'contain', filter: 'drop-shadow(2px 4px 6px rgba(0,0,0,0.5))', pointerEvents: 'none' }} 
+        style={{ width: '100%', height: '100%', objectFit: 'contain', filter: 'drop-shadow(2px 4px 6px rgba(0,0,0,0.5))' }} 
       />
     </div>
   );
 }
 
-// --- WIDGET DE SPOTIFY MOVIBLE CON LÓGICA GLOBAL ---
+// --- TERMINAL DE CÓDIGOS SECRETOS & EASTER EGGS ---
+function SecretCodesWidget({ onTriggerEffect }: { onTriggerEffect: (effectName: string) => void }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [code, setCode] = useState("");
+  const [feedback, setFeedback] = useState("");
+
+  const handleRedeem = () => {
+    const clean = code.trim().toUpperCase();
+    if (!clean) return;
+
+    if (clean === "BUBBLES" || clean === "MAGIC") {
+      setFeedback("✨ ¡Efecto mágico de burbujas activado!");
+      onTriggerEffect("bubbles");
+    } else if (clean === "CYBER" || clean === "MATRIX") {
+      setFeedback("💻 ¡Modo Ciberespacio activado!");
+      onTriggerEffect("cyber");
+    } else if (clean === "BESO" || clean === "KISS") {
+      setFeedback("💋 ¡Animación especial del beso activada!");
+      onTriggerEffect("kiss");
+    } else if (clean === "TERICOMMISSION" || clean === "MAXINE20") {
+      setFeedback("🎉 ¡Código válido! 20% de descuento en tu próxima comisión.");
+      onTriggerEffect("discount");
+    } else {
+      setFeedback("❌ Código inválido o secreto oculto aún no descubierto.");
+    }
+    setCode("");
+  };
+
+  return (
+    <div style={{ position: 'fixed', bottom: '20px', left: '20px', zIndex: 9996 }}>
+      {!isOpen ? (
+        <Button variant="signal" onClick={() => setIsOpen(true)} style={{ borderRadius: '50%', width: '50px', height: '50px', boxShadow: '0 4px 12px rgba(0,0,0,0.4)' }} title="Códigos Secretos">
+          <Terminal size={22} />
+        </Button>
+      ) : (
+        <div style={{ background: '#ece9d8', border: '2px solid #0055ea', borderRadius: '6px', width: '280px', boxShadow: '2px 4px 15px rgba(0,0,0,0.5)', fontFamily: 'Tahoma, sans-serif' }}>
+          <div style={{ background: 'linear-gradient(to right, #0055ea, #1690ff)', color: 'white', padding: '4px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', fontWeight: 'bold' }}>
+            <span>🔑 Códigos Secretos.exe</span>
+            <button onClick={() => setIsOpen(false)} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 'bold' }}>✕</button>
+          </div>
+          <div style={{ padding: '12px', background: '#0a192f', color: '#fff' }}>
+            <p style={{ fontSize: '11px', color: '#8892b0', marginBottom: '8px' }}>Introduce un código secreto o easter egg:</p>
+            <div style={{ display: 'flex', gap: '5px', marginBottom: '8px' }}>
+              <Input placeholder="Ej. BUBBLES..." value={code} onChange={(e) => setCode(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleRedeem(); }} style={{ fontSize: '12px', background: '#0f203b', color: 'white' }} />
+              <Button variant="signal" size="sm" onClick={handleRedeem}>Canjear</Button>
+            </div>
+            {feedback && <p style={{ fontSize: '11px', color: '#4ade80', marginTop: '5px' }}>{feedback}</p>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- WIDGET DE SPOTIFY MOVIBLE ---
 function SpotifyWidget() {
   const spotifyUrl = getStoredSpotify();
   const [minimized, setMinimized] = useState(false);
@@ -297,9 +221,7 @@ function SpotifyWidget() {
     };
 
     const handleUp = () => {
-      if (isDraggingRef.current) {
-        setIsDragging(false);
-      }
+      if (isDraggingRef.current) setIsDragging(false);
     };
 
     window.addEventListener("mousemove", handleMove);
@@ -313,10 +235,7 @@ function SpotifyWidget() {
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(true);
-    dragRef.current = {
-      x: e.clientX - pos.x,
-      y: e.clientY - pos.y,
-    };
+    dragRef.current = { x: e.clientX - pos.x, y: e.clientY - pos.y };
   };
 
   return (
@@ -325,7 +244,7 @@ function SpotifyWidget() {
         onMouseDown={handleMouseDown}
         style={{ background: 'linear-gradient(to right, #0055ea, #1690ff)', color: 'white', padding: '6px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', fontWeight: 'bold', cursor: 'grab', userSelect: 'none' }}
       >
-        <span>🎵 Spotify - WinXP Player (Arrastrable)</span>
+        <span>🎵 Spotify - WinXP Player (Movible)</span>
         <button onClick={() => setMinimized(!minimized)} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 'bold' }}>{minimized ? "□" : "_"}</button>
       </div>
       {!minimized && (
@@ -939,7 +858,7 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
   const [newArtImage, setNewArtImage] = useState("");
 
   const [spotifyUrl, setSpotifyUrl] = useState(getStoredSpotify());
-  const [shimejiAnims, setShimejiAnims] = useState(getStoredShimejiAnimations());
+  const [shimejiFrames, setShimejiFrames] = useState<string[]>(getStoredShimejiFrames());
 
   const [todos, setTodos] = useState<{ id: string; text: string; done: boolean }[]>(() => JSON.parse(localStorage.getItem("admin_todos") || "[]"));
   const [newTodoText, setNewTodoText] = useState("");
@@ -1017,29 +936,6 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
     localStorage.setItem("site_portfolio", JSON.stringify(updated));
   };
 
-  const handleShimejiAnimationUpload = (animKey: keyof typeof shimejiAnims, e: ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    const framesList: string[] = [];
-    let processed = 0;
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        if (ev.target?.result) {
-          framesList.push(ev.target.result as string);
-        }
-        processed++;
-        if (processed === files.length) {
-          const updated = { ...shimejiAnims, [animKey]: framesList };
-          setShimejiAnims(updated);
-          localStorage.setItem("site_shimeji_animations", JSON.stringify(updated));
-          alert(`¡Animación "${animKey}" configurada con ${framesList.length} frames!`);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
-  };
-
   return (
     <div className="admin-panel">
       <div className="admin-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1057,7 +953,7 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
         <Button variant={activeTab === "imagenes" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("imagenes")}>Imágenes del sitio</Button>
         <Button variant={activeTab === "emojis" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("emojis")}>Emojis imagen</Button>
         <Button variant={activeTab === "musica" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("musica")}>Música</Button>
-        <Button variant={activeTab === "shimeji" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("shimeji")}>Mascota Shimeji Frames</Button>
+        <Button variant={activeTab === "shimeji" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("shimeji")}>Mascota Shimeji</Button>
         <Button variant={activeTab === "organizador" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("organizador")}>Organizador</Button>
       </div>
 
@@ -1269,31 +1165,30 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
 
       {activeTab === "shimeji" && (
         <div style={{ padding: '20px', background: '#0f203b', borderRadius: '8px', border: '1px solid #1e3a8a' }}>
-          <h3 style={{ marginBottom: '15px' }}>Configuración de Animaciones Shimeji por Acción</h3>
-          <p style={{ color: '#8892b0', fontSize: '13px', marginBottom: '20px' }}>Sube los fotogramas (PNGs múltiples) correspondientes para cada estado de comportamiento de tu mascota:</p>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '15px' }}>
-            {[
-              { key: "walk", label: "Caminar por el suelo (4-6 frames)" },
-              { key: "fall", label: "Caer / Flotar (2 frames)" },
-              { key: "climb", label: "Escalar paredes (4 frames)" },
-              { key: "sit", label: "Sentarse a descansar (2-3 frames)" },
-              { key: "laugh", label: "Reír / Idle (3-4 frames)" },
-              { key: "click", label: "Reacción al clic (2 frames)" },
-              { key: "drag", label: "Balanceo al arrastrar (2 frames)" },
-            ].map((item) => (
-              <div key={item.key} style={{ background: '#0a192f', padding: '12px', borderRadius: '6px', border: '1px solid #1e3a8a' }}>
-                <strong style={{ fontSize: '12px', display: 'block', marginBottom: '8px' }}>{item.label}</strong>
-                <span style={{ fontSize: '10px', color: '#8892b0', display: 'block', marginBottom: '8px' }}>
-                  Frames actuales: {shimejiAnims[item.key as keyof typeof shimejiAnims]?.length || 1}
-                </span>
-                <label className="upload-button" style={{ background: '#1e3a8a', padding: '6px 10px', borderRadius: '4px', fontSize: '11px', cursor: 'pointer', display: 'inline-block', textAlign: 'center', width: '100%' }}>
-                  <ImageIcon size={14} /> Seleccionar PNGs
-                  <input type="file" accept="image/*" multiple onChange={(e) => handleShimejiAnimationUpload(item.key as keyof typeof shimejiAnims, e)} style={{ display: 'none' }} />
-                </label>
-              </div>
-            ))}
-          </div>
+          <h3 style={{ marginBottom: '15px' }}>Mascota Shimeji (Fotogramas)</h3>
+          <p style={{ color: '#8892b0', fontSize: '13px', marginBottom: '15px' }}>Sube fotogramas PNG para animar a tu mascota:</p>
+          <label className="upload-button" style={{ background: '#1e3a8a', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', display: 'inline-block' }}>
+            <ImageIcon size={14} /> Seleccionar fotogramas PNG
+            <input type="file" accept="image/*" multiple onChange={(e) => {
+              const files = e.target.files;
+              if (!files || files.length === 0) return;
+              const loaded: string[] = [];
+              let count = 0;
+              Array.from(files).forEach((file) => {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                  if (ev.target?.result) loaded.push(ev.target.result as string);
+                  count++;
+                  if (count === files.length) {
+                    setShimejiFrames(loaded);
+                    localStorage.setItem("site_shimeji_frames", JSON.stringify(loaded));
+                    alert("¡Shimeji actualizado!");
+                  }
+                };
+                reader.readAsDataURL(file);
+              });
+            }} style={{ display: 'none' }} />
+          </label>
         </div>
       )}
 
@@ -1421,6 +1316,8 @@ export function TeriApp() {
   const [page, setPageState] = useState<Page>("inicio");
   const [adminLoginOpen, setAdminLoginOpen] = useState(false);
   const [adminMode, setAdminMode] = useState(false);
+  const [effectMode, setEffectMode] = useState<"normal" | "bubbles" | "cyber" | "kiss">("normal");
+
   const setPage = (next: Page) => { setPageState(next); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
   const handleAdminAccess = () => {
@@ -1432,9 +1329,28 @@ export function TeriApp() {
   };
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${effectMode === "cyber" ? "cyber-theme" : ""}`}>
       <div className="ambient-grid" />
       <div className="scanline" />
+
+      {/* EFECTO DE BURBUJAS MÁGICAS */}
+      {effectMode === "bubbles" && (
+        <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 9999, overflow: 'hidden' }}>
+          {Array.from({ length: 25 }).map((_, i) => (
+            <div key={i} style={{ position: 'absolute', bottom: '-20px', left: `${Math.random() * 100}%`, width: `${15 + Math.random() * 25}px`, height: `${15 + Math.random() * 25}px`, background: 'rgba(105, 162, 255, 0.4)', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.6)', animation: `floatUp ${3 + Math.random() * 4}s linear infinite`, animationDelay: `${Math.random() * 3}s` }} />
+          ))}
+        </div>
+      )}
+
+      {/* EFECTO DE ANIMACIÓN DE BESO A PANTALLA COMPLETA */}
+      {effectMode === "kiss" && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 10000, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', animation: 'fadeIn 0.3s ease' }}>
+          <img src={avatarAsset.url} alt="Personaje tirando un beso" style={{ width: '220px', height: '220px', objectFit: 'contain', animation: 'bounce 1s infinite', filter: 'drop-shadow(0 0 20px #ff6b9d)' }} />
+          <h2 style={{ color: '#ff6b9d', marginTop: '20px', fontFamily: 'Tahoma, sans-serif', textShadow: '0 0 10px #ff6b9d' }}>¡Muuuuchox besitos de Maxine! ♡</h2>
+          <Button variant="signal" onClick={() => setEffectMode("normal")} style={{ marginTop: '20px' }}>Cerrar animación</Button>
+        </div>
+      )}
+
       <Header page={page} setPage={setPage} onAdminAccess={handleAdminAccess} />
       {adminMode && <AdminPanel onClose={() => setAdminMode(false)} onLogout={() => setAdminMode(false)} />}
       {page === "inicio" && <Home setPage={setPage} />}
@@ -1444,6 +1360,7 @@ export function TeriApp() {
       {page === "contacto" && <Contact />}
       <VirtualShimeji />
       <SpotifyWidget />
+      <SecretCodesWidget onTriggerEffect={(eff) => setEffectMode(eff as any)} />
       <footer className="system-footer"><span>MUNCHINE ONLINE!</span><span>ENLACES VERIFICADOS · ES · 01:23 P.M.</span><div><Play size={12} /> DEEP_SEA_SIGNAL.WAV</div></footer>
       <AdminLoginDialog
         open={adminLoginOpen}
