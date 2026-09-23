@@ -102,19 +102,47 @@ const getStoredShimejiFrames = (): string[] => {
   return [avatarAsset.url];
 };
 
-// --- COMPONENTE SHIMEJI SIMPLE Y ESTABLE ---
+// --- COMPONENTE SHIMEJI MÓVIL (CAMINA Y SE MUEVE) ---
 function VirtualShimeji() {
-  const [pos, setPos] = useState({ x: 80, y: window.innerHeight - 110 });
+  const [pos, setPos] = useState({ x: 100, y: window.innerHeight - 90 });
+  const [direction, setDirection] = useState<1 | -1>(1);
   const [frameIndex, setFrameIndex] = useState(0);
   const frames = getStoredShimejiFrames();
 
   useEffect(() => {
-    if (frames.length <= 1) return;
     const interval = setInterval(() => {
       setFrameIndex((prev) => (prev + 1) % frames.length);
-    }, 250);
+    }, 180);
     return () => clearInterval(interval);
   }, [frames.length]);
+
+  useEffect(() => {
+    const moveInterval = setInterval(() => {
+      setPos((prev) => {
+        let nextX = prev.x + direction * 2;
+        let nextDir = direction;
+
+        const rightLimit = window.innerWidth - 70;
+        const leftLimit = 10;
+
+        if (nextX >= rightLimit) {
+          nextX = rightLimit;
+          nextDir = -1;
+        } else if (nextX <= leftLimit) {
+          nextX = leftLimit;
+          nextDir = 1;
+        }
+
+        if (nextDir !== direction) {
+          setDirection(nextDir);
+        }
+
+        return { x: nextX, y: window.innerHeight - 90 };
+      });
+    }, 40);
+
+    return () => clearInterval(moveInterval);
+  }, [direction]);
 
   return (
     <div
@@ -127,11 +155,12 @@ function VirtualShimeji() {
         height: '64px',
         userSelect: 'none',
         pointerEvents: 'none',
+        transform: direction === -1 ? 'scaleX(-1)' : 'scaleX(1)',
       }}
-      title="¡Mascota Shimeji!"
+      title="¡Shimeji caminando!"
     >
       <img 
-        src={frames[frameIndex] || frames[0]} 
+        src={frames[frameIndex % frames.length] || frames[0]} 
         alt="Shimeji" 
         style={{ width: '100%', height: '100%', objectFit: 'contain', filter: 'drop-shadow(2px 4px 6px rgba(0,0,0,0.5))' }} 
       />
@@ -139,7 +168,7 @@ function VirtualShimeji() {
   );
 }
 
-// --- TERMINAL DE CÓDIGOS SECRETOS & EASTER EGGS ---
+// --- TERMINAL DE CÓDIGOS SECRETOS ---
 function SecretCodesWidget({ onTriggerEffect }: { onTriggerEffect: (effectName: string) => void }) {
   const [isOpen, setIsOpen] = useState(false);
   const [code, setCode] = useState("");
@@ -741,7 +770,7 @@ function Community({ adminMode }: { adminMode: boolean }) {
       content: comment.trim(),
       author: finalAuthor,
       approved: adminMode ? true : false,
-      is_admin_reply: false,
+      is_admin_reply: adminMode ? true : false, // Si es admin, se marca como respuesta/comentario oficial de admin
       parent_id: null,
       created_at: new Date().toISOString(),
     };
@@ -750,7 +779,7 @@ function Community({ adminMode }: { adminMode: boolean }) {
     localStorage.setItem("local_comments", JSON.stringify(updated));
     setComment("");
     setAuthor("");
-    alert(adminMode ? "¡Comentario de admin publicado!" : "¡Comentario enviado! Aparecerá cuando Maxine lo apruebe.");
+    alert(adminMode ? "¡Comentario de admin publicado directamente!" : "¡Comentario enviado! Aparecerá cuando Maxine lo apruebe.");
   };
 
   const sendReply = (parentId: string, content: string, isAdmin: boolean) => {
@@ -808,7 +837,7 @@ function Community({ adminMode }: { adminMode: boolean }) {
             />
           ))}
           <div style={{ marginTop: '15px' }}>
-            <Input className="comment-author-input" placeholder={adminMode ? "Tu nombre de usuario (admin)..." : "Tu nombre..."} value={author} onChange={(e) => setAuthor(e.target.value)} style={{ marginBottom: '8px' }} />
+            <Input className="comment-author-input" placeholder={adminMode ? `Tu nombre (${profile.name} Admin)...` : "Tu nombre..."} value={author} onChange={(e) => setAuthor(e.target.value)} style={{ marginBottom: '8px' }} />
             <div className="emoji-row" style={{ marginBottom: '8px' }}>
               <button className="emoji-toggle" onClick={() => setShowEmojiPicker(!showEmojiPicker)}><Smile size={16} /> Emojis personalizados</button>
               {showEmojiPicker && (
@@ -1315,7 +1344,7 @@ function Contact() {
 export function TeriApp() {
   const [page, setPageState] = useState<Page>("inicio");
   const [adminLoginOpen, setAdminLoginOpen] = useState(false);
-  const [adminMode, setAdminMode] = useState(false);
+  const [adminMode, setAdminMode] = useState(() => localStorage.getItem("site_admin_logged") === "true");
   const [effectMode, setEffectMode] = useState<"normal" | "bubbles" | "cyber" | "kiss">("normal");
 
   const setPage = (next: Page) => { setPageState(next); window.scrollTo({ top: 0, behavior: "smooth" }); };
@@ -1328,12 +1357,16 @@ export function TeriApp() {
     }
   };
 
+  const handleLogoutAdmin = () => {
+    localStorage.removeItem("site_admin_logged");
+    setAdminMode(false);
+  };
+
   return (
     <div className={`app-shell ${effectMode === "cyber" ? "cyber-theme" : ""}`}>
       <div className="ambient-grid" />
       <div className="scanline" />
 
-      {/* EFECTO DE BURBUJAS MÁGICAS */}
       {effectMode === "bubbles" && (
         <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 9999, overflow: 'hidden' }}>
           {Array.from({ length: 25 }).map((_, i) => (
@@ -1342,7 +1375,6 @@ export function TeriApp() {
         </div>
       )}
 
-      {/* EFECTO DE ANIMACIÓN DE BESO A PANTALLA COMPLETA */}
       {effectMode === "kiss" && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 10000, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', animation: 'fadeIn 0.3s ease' }}>
           <img src={avatarAsset.url} alt="Personaje tirando un beso" style={{ width: '220px', height: '220px', objectFit: 'contain', animation: 'bounce 1s infinite', filter: 'drop-shadow(0 0 20px #ff6b9d)' }} />
@@ -1352,7 +1384,7 @@ export function TeriApp() {
       )}
 
       <Header page={page} setPage={setPage} onAdminAccess={handleAdminAccess} />
-      {adminMode && <AdminPanel onClose={() => setAdminMode(false)} onLogout={() => setAdminMode(false)} />}
+      {adminMode && <AdminPanel onClose={() => setAdminMode(false)} onLogout={handleLogoutAdmin} />}
       {page === "inicio" && <Home setPage={setPage} />}
       {page === "portafolio" && <Portfolio />}
       {page === "comunidad" && <Community adminMode={adminMode} />}
@@ -1365,7 +1397,11 @@ export function TeriApp() {
       <AdminLoginDialog
         open={adminLoginOpen}
         onOpenChange={setAdminLoginOpen}
-        onSuccess={() => { setAdminMode(true); setAdminLoginOpen(false); }}
+        onSuccess={() => {
+          localStorage.setItem("site_admin_logged", "true");
+          setAdminMode(true);
+          setAdminLoginOpen(false);
+        }}
       />
     </div>
   );
