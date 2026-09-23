@@ -15,12 +15,6 @@ import { CustomCursor } from "../components/CustomCursor";
 
 function NotFoundComponent() {
   return (
-    <>
-    <CustomCursor />
-    {/* Aquí estará el resto del código que ya tenías, como el Outlet, navegación, etc. */}
-    <Outlet />
-  </>
-);
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-7xl font-bold text-foreground">404</h1>
@@ -127,6 +121,7 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <CustomCursor />
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
     </QueryClientProvider>
