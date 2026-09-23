@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent, type ChangeEvent } from "react";
 import { Brush, Check, ChevronDown, Coffee, CornerDownRight, Eraser, Eye, Folder, Image as ImageIcon, LockKeyhole, Menu, MessageCircle, Minus, Orbit, Paintbrush, Play, RotateCcw, Send, Smile, Sparkles, Square, Trash2, X, Music, LogOut, Terminal } from "lucide-react";
-import avatarAsset from "@/assets/teridayo-avatar.png.asset.json";
+import avatarAsset from "@/assets/maxine-avatar.png.asset.json";
 import orcaAsset from "@/assets/orca-credential.jpg.asset.json";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -23,7 +23,7 @@ const stages = [
   { title: "3. ¡Ilustración finalizada! 🎨", copy: "Sombras, luces y efectos mágicos listos para exportar." },
 ];
 
-const ADMIN_PASSWORD = "teri123";
+const ADMIN_PASSWORD = "Maxine123";
 
 const colorPresets = [
   { name: "Azul", value: "#69a2ff" },
@@ -323,7 +323,7 @@ function SecretCodesWidget({ onTriggerEffect }: { onTriggerEffect: (effectName: 
     } else if (clean === "BESO" || clean === "KISS") {
       setFeedback("💋 ¡Animación especial del beso activada!");
       onTriggerEffect("kiss");
-    } else if (clean === "TERICOMMISSION" || clean === "MAXINE20") {
+    } else if (clean === "MAXINECOMMISSION" || clean === "MAXINE20") {
       setFeedback("🎉 ¡Código válido! 20% de descuento en tu próxima comisión.");
       onTriggerEffect("discount");
     } else {
@@ -475,7 +475,7 @@ function AdminLoginDialog({ open, onOpenChange, onSuccess }: { open: boolean; on
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="station-dialog">
-        <DialogHeader><DialogTitle>admin_login.exe</DialogTitle><DialogDescription>Zona restringida de TeriDayo.</DialogDescription></DialogHeader>
+        <DialogHeader><DialogTitle>admin_login.exe</DialogTitle><DialogDescription>Zona restringida de Maxine.</DialogDescription></DialogHeader>
         <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Contraseña" onKeyDown={(e) => { if (e.key === "Enter") handleLogin(); }} />
         {error && <p className="admin-error">{error}</p>}
         <Button variant="signal" onClick={handleLogin}>Entrar</Button>
@@ -528,7 +528,7 @@ function TabletExperience({ setPage }: { setPage: (page: Page) => void }) {
                 <div className="screen-grid" />
                 <div className={`stage-art sketch ${stage === 0 ? "visible" : ""}`}><AvatarBlueprint mode="sketch" /></div>
                 <div className={`stage-art lineart ${stage === 1 ? "visible" : ""}`}><AvatarBlueprint mode="line" /></div>
-                <div className={`stage-art final ${stage === 2 ? "visible" : ""}`}><img src={images.homeProfile} alt="Ilustración final de Teri" /></div>
+                <div className={`stage-art final ${stage === 2 ? "visible" : ""}`}><img src={images.homeProfile} alt="Ilustración final de Maxine" /></div>
                 <div className="screen-readout"><span>ACTIVE_LAYER: 0{stage + 1}_{["SKETCH", "LINEART", "RENDER"][stage]}</span><span>PRESSURE: {Math.round(52 + progress * 35)}%</span><span>STYLUS: CONNECTED</span></div>
                 <div className="stylus" style={{ left: `${penX}%`, top: `${penY}%` }}><span /></div>
               </div>
@@ -555,7 +555,7 @@ function ProfileBand() {
   return (
     <section className="profile-band">
       <Window title="Munchxine_profile.exe"><div className="profile-content"><img src={images.homeProfile} alt="Avatar pixel art" /><div><p className="eyebrow">HIYAAA!!</p><h2>{profile.name}</h2><p>Artista chileno de 19 años • Arte 2D y 3D • ESP / ENG</p><div className="tags"><span>Roblox</span><span>ARGs</span><span>Pokemon</span></div></div></div></Window>
-      <Window title="ACCESOS_DIRECTOS"><div className="online-content"><h2>Maxine Online!</h2><div className="social-row"><Button variant="station"><X /> Twitter / X</Button><Button variant="station"><Coffee /> Ko-fi</Button></div><div className="online-art"><img src={images.homeDirects} alt="Teri online" /><span>@Munchxine_</span></div></div></Window>
+      <Window title="ACCESOS_DIRECTOS"><div className="online-content"><h2>Maxine Online!</h2><div className="social-row"><Button variant="station"><X /> Twitter / X</Button><Button variant="station"><Coffee /> Ko-fi</Button></div><div className="online-art"><img src={images.homeDirects} alt="Maxine online" /><span>@Munchxine_</span></div></div></Window>
     </section>
   );
 }
@@ -563,7 +563,7 @@ function ProfileBand() {
 function Home({ setPage }: { setPage: (page: Page) => void }) {
   const profile = getStoredProfile();
   const images = getStoredImagesConfig();
-  return <><TabletExperience setPage={setPage} /><section className="intro-band"><Window title="Munchxine.txt"><div className="intro-copy"><img src={images.homeIntro} alt="Avatar de Teri" /><div><p className="eyebrow">WELCOME_NOTE.LOG</p><h2>¡Haii! Mi nombre es {profile.name}.</h2><p>Soy un artista digital enfocado en el arte 2D, tando ilustracion como modelos Vtuber/Pngtuber. </p></div></div></Window></section><ProfileBand /></>;
+  return <><TabletExperience setPage={setPage} /><section className="intro-band"><Window title="Munchxine.txt"><div className="intro-copy"><img src={images.homeIntro} alt="Avatar de Maxine" /><div><p className="eyebrow">WELCOME_NOTE.LOG</p><h2>¡Haii! Mi nombre es {profile.name}.</h2><p>Soy un artista digital enfocado en el arte 2D, tando ilustracion como modelos Vtuber/Pngtuber. </p></div></div></Window></section><ProfileBand /></>;
 }
 
 function Portfolio() {
@@ -759,7 +759,7 @@ function PaintCanvas() {
       </div>
       <canvas ref={canvasRef} width={440} height={220} style={{ touchAction: "none" }} onPointerDown={start} onPointerMove={draw} onPointerUp={() => drawingRef.current = false} onPointerLeave={() => drawingRef.current = false} />
       <Input className="paint-author" placeholder="Tu nombre (opcional)..." value={author} onChange={(e) => setAuthor(e.target.value)} />
-      <Textarea placeholder="Una notita para Teri..." value={note} onChange={(e) => setNote(e.target.value)} />
+      <Textarea placeholder="Una notita para Maxine..." value={note} onChange={(e) => setNote(e.target.value)} />
       {submitStatus && <p className={`submit-status ${submitStatus.type}`}>{submitStatus.msg}</p>}
       <Button variant="signal" onClick={submit} disabled={submitting}><Send />{submitting ? "Enviando..." : "Enviar dibujo ♡"}</Button>
     </Window>
@@ -954,7 +954,7 @@ function Community({ adminMode }: { adminMode: boolean }) {
         <Window title="Muro de Maxine" className="wall">
           <article className="post">
             <div className="post-author">
-              <img src={images.homeProfile} alt="Teri" />
+              <img src={images.homeProfile} alt="Maxine" />
               <div><strong>{profile.name} <small>ADMIN / DEV :3C</small></strong><span>14 sept 2026, 0:24</span></div>
             </div>
             <p>¡Haii! Bienvenidos al muro oficial de la web.</p>
@@ -1442,14 +1442,14 @@ function About() {
         <p>Mi pequeño rincón personal estilo Strawpage</p>
       </div>
       <div className="about-stack">
-        <Window title="ABOUT_TERIDAYO.TXT">
+        <Window title="ABOUT_MAXINE.TXT">
           <div className="about-note">
-            <img src={images.aboutMain} alt="Avatar TeriDayo" />
+            <img src={images.aboutMain} alt="Avatar Maxine" />
             <p>✨ ¡Haii! Bienvenidos a mi Strawpage personal. Aquí comparto un poco sobre mí, mis gustos y rayones favoritos.</p>
           </div>
         </Window>
         <Window title="INTERESTS.LOG">
-          <div className="large-art"><img src={images.aboutMain} alt="Arte pixel de TeriDayo" /></div>
+          <div className="large-art"><img src={images.aboutMain} alt="Arte pixel de Maxine" /></div>
         </Window>
       </div>
       <ProfileBand />
@@ -1465,20 +1465,20 @@ function Contact() {
   return (
     <main className="page-shell narrow">
       <div className="page-heading">
-        <p className="eyebrow">TERIDAYO.CONTACT // SYSTEM.EXE</p>
+        <p className="eyebrow">MAXINE.CONTACT // SYSTEM.EXE</p>
         <h1>Contacto</h1>
-        <p>Haz clic en el póster de credencial para abrir el canal directo con Teri.</p>
+        <p>Haz clic en el póster de credencial para abrir el canal directo con Maxine.</p>
       </div>
       <button className="credential-button" onClick={() => setOpen(true)}>
         <img src={images.credential} alt="Credencial de orcas" />
         <span>[ ABRIR CREDENCIAL ]</span>
       </button>
       {open && (
-        <Window title="TeriDayo_contact.exe" className="contact-card">
+        <Window title="Maxine_contact.exe" className="contact-card">
           <div className="contact-identity">
             <img src={images.homeProfile} alt="Avatar" />
             <div>
-              <p className="eyebrow">@TeriDayo_</p>
+              <p className="eyebrow">@Munchxine_</p>
               <h2>{profile.name}</h2>
               <p>Artista digital 2D + modelador 3D (ESP / ENG)</p>
             </div>
@@ -1502,7 +1502,7 @@ function Contact() {
   );
 }
 
-export function TeriApp() {
+export function MaxineApp() {
   const [page, setPageState] = useState<Page>("inicio");
   const [adminLoginOpen, setAdminLoginOpen] = useState(false);
   const [adminPanelOpen, setAdminPanelOpen] = useState(false);
