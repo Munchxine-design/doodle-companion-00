@@ -147,21 +147,20 @@ function VirtualShimeji() {
   );
 }
 
-// --- WIDGET DE SPOTIFY ESTILO WINDOWS XP ---
+// --- WIDGET DE SPOTIFY AMPLIADO ESTILO WINDOWS XP ---
 function SpotifyWidget() {
   const spotifyUrl = getStoredSpotify();
   const [minimized, setMinimized] = useState(false);
 
   if (!spotifyUrl) return null;
 
-  // Asegurar que sea formato embed si el usuario pegó el link normal de spotify
   let embedUrl = spotifyUrl;
   if (spotifyUrl.includes("spotify.com") && !spotifyUrl.includes("/embed/")) {
     embedUrl = spotifyUrl.replace("spotify.com/", "spotify.com/embed/");
   }
 
   return (
-    <div style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 9997, width: '300px', background: '#ece9d8', border: '2px solid #0055ea', borderRadius: '5px 5px 0 0', boxShadow: '2px 2px 10px rgba(0,0,0,0.5)', fontFamily: 'Tahoma, sans-serif' }}>
+    <div style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 9997, width: '380px', background: '#ece9d8', border: '2px solid #0055ea', borderRadius: '5px 5px 0 0', boxShadow: '2px 2px 10px rgba(0,0,0,0.5)', fontFamily: 'Tahoma, sans-serif' }}>
       <div style={{ background: 'linear-gradient(to right, #0055ea, #1690ff)', color: 'white', padding: '4px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', fontWeight: 'bold' }}>
         <span>🎵 Spotify - WinXP Player</span>
         <button onClick={() => setMinimized(!minimized)} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 'bold' }}>{minimized ? "□" : "_"}</button>
@@ -171,10 +170,11 @@ function SpotifyWidget() {
           <iframe 
             src={embedUrl} 
             width="100%" 
-            height="80" 
+            height="152" 
             frameBorder="0" 
             allow="encrypted-media"
             title="Spotify Player"
+            style={{ borderRadius: '0' }}
           />
         </div>
       )}
