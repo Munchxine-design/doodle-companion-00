@@ -102,7 +102,7 @@ const getStoredShimejiFrames = (): string[] => {
   return [avatarAsset.url];
 };
 
-// --- COMPONENTE SHIMEJI MÓVIL (CAMINA Y SE MUEVE) ---
+// --- COMPONENTE SHIMEJI MÓVIL ---
 function VirtualShimeji() {
   const [pos, setPos] = useState({ x: 100, y: window.innerHeight - 90 });
   const [direction, setDirection] = useState<1 | -1>(1);
@@ -179,7 +179,7 @@ function SecretCodesWidget({ onTriggerEffect }: { onTriggerEffect: (effectName: 
     if (!clean) return;
 
     if (clean === "BUBBLES" || clean === "MAGIC") {
-      setFeedback("✨ ¡Efecto mágico de burbujas activado!");
+      setFeedback("✨ ¡Efecto mágico de burbujas en el fondo activado!");
       onTriggerEffect("bubbles");
     } else if (clean === "CYBER" || clean === "MATRIX") {
       setFeedback("💻 ¡Modo Ciberespacio activado!");
@@ -770,7 +770,7 @@ function Community({ adminMode }: { adminMode: boolean }) {
       content: comment.trim(),
       author: finalAuthor,
       approved: adminMode ? true : false,
-      is_admin_reply: adminMode ? true : false, // Si es admin, se marca como respuesta/comentario oficial de admin
+      is_admin_reply: adminMode ? true : false,
       parent_id: null,
       created_at: new Date().toISOString(),
     };
@@ -1367,11 +1367,35 @@ export function TeriApp() {
       <div className="ambient-grid" />
       <div className="scanline" />
 
+      {/* BURBUJAS FLOTANDO EN EL FONDO TRASLÚCIDO */}
       {effectMode === "bubbles" && (
-        <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 9999, overflow: 'hidden' }}>
-          {Array.from({ length: 25 }).map((_, i) => (
-            <div key={i} style={{ position: 'absolute', bottom: '-20px', left: `${Math.random() * 100}%`, width: `${15 + Math.random() * 25}px`, height: `${15 + Math.random() * 25}px`, background: 'rgba(105, 162, 255, 0.4)', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.6)', animation: `floatUp ${3 + Math.random() * 4}s linear infinite`, animationDelay: `${Math.random() * 3}s` }} />
+        <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0, overflow: 'hidden' }}>
+          {Array.from({ length: 30 }).map((_, i) => (
+            <div
+              key={i}
+              style={{
+                position: 'absolute',
+                bottom: '-40px',
+                left: `${Math.random() * 100}%`,
+                width: `${12 + Math.random() * 30}px`,
+                height: `${12 + Math.random() * 30}px`,
+                background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.8), rgba(105, 162, 255, 0.3))',
+                borderRadius: '50%',
+                border: '1px solid rgba(255,255,255,0.5)',
+                boxShadow: 'inset 0 0 4px rgba(255,255,255,0.8), 0 0 8px rgba(105,162,255,0.4)',
+                animation: `floatUp ${4 + Math.random() * 5}s linear infinite`,
+                animationDelay: `${Math.random() * 5}s`,
+              }}
+            />
           ))}
+          <style>{`
+            @keyframes floatUp {
+              0% { transform: translateY(0) scale(0.8); opacity: 0; }
+              20% { opacity: 0.7; }
+              80% { opacity: 0.7; }
+              100% { transform: translateY(-105vh) scale(1.2); opacity: 0; }
+            }
+          `}</style>
         </div>
       )}
 
@@ -1406,3 +1430,4 @@ export function TeriApp() {
     </div>
   );
 }
+            
