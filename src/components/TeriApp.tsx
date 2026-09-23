@@ -216,15 +216,9 @@ function PaintCanvas() {
   const [submitting, setSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
-  useEffect(() => {
-    colorRef.current = color;
-  }, [color]);
-  useEffect(() => {
-    eraserRef.current = eraser;
-  }, [eraser]);
-  useEffect(() => {
-    brushSizeRef.current = brushSize;
-  }, [brushSize]);
+  useEffect(() => { colorRef.current = color; }, [color]);
+  useEffect(() => { eraserRef.current = eraser; }, [eraser]);
+  useEffect(() => { brushSizeRef.current = brushSize; }, [brushSize]);
 
   const getCtx = () => canvasRef.current?.getContext("2d") ?? null;
 
@@ -319,17 +313,11 @@ function PaintCanvas() {
         return;
       }
 
-      const blob = await new Promise<Blob | null>((resolve) =>
-        canvas.toBlob((b) => resolve(b), "image/png"),
-      );
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob((b) => resolve(b), "image/png"));
       if (!blob) throw new Error("Failed to create image");
 
       const fileName = `drawing_${Date.now()}_${Math.random().toString(36).slice(2)}.png`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("drawings")
-        .upload(fileName, blob, { contentType: "image/png" });
-
+      const { error: uploadError } = await supabase.storage.from("drawings").upload(fileName, blob, { contentType: "image/png" });
       if (uploadError) throw uploadError;
 
       const { error: dbError } = await supabase.from("submissions").insert({
@@ -372,11 +360,7 @@ function PaintCanvas() {
           ))}
           <label className="color-custom" title="Color personalizado">
             <Paintbrush size={14} />
-            <input
-              type="color"
-              value={color}
-              onChange={(e) => { setColor(e.target.value); setEraser(false); }}
-            />
+            <input type="color" value={color} onChange={(e) => { setColor(e.target.value); setEraser(false); }} />
           </label>
         </div>
       </div>
@@ -397,7 +381,8 @@ function PaintCanvas() {
           <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: "none" }} />
         </label>
       </div>
-      <canvas ref={canvasRef} width={440} height={220} onPointerDown={start} onPointerMove={draw} onPointerUp={() => drawingRef.current = false} onPointerLeave={() => drawingRef.current = false} />
+      {/* touchAction evita que se haga scroll al dibujar en pantallas táctiles */}
+      <canvas ref={canvasRef} width={440} height={220} style={{ touchAction: "none" }} onPointerDown={start} onPointerMove={draw} onPointerUp={() => drawingRef.current = false} onPointerLeave={() => drawingRef.current = false} />
       <Input className="paint-author" placeholder="Tu nombre (opcional)..." value={author} onChange={(e) => setAuthor(e.target.value)} />
       <Textarea placeholder="Una notita para Teri..." value={note} onChange={(e) => setNote(e.target.value)} />
       {submitStatus && <p className={`submit-status ${submitStatus.type}`}>{submitStatus.msg}</p>}
