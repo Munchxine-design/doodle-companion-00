@@ -91,19 +91,15 @@ const getStoredPortfolio = () => {
   ]));
 };
 
-const getStoredMusic = () => {
-  return JSON.parse(localStorage.getItem("site_music") || JSON.stringify({
-    title: "Deep Sea Signal.ogg",
-    url: "",
-    isPlaying: false
-  }));
+const getStoredSpotify = () => {
+  return localStorage.getItem("site_spotify_url") || "";
 };
 
 const getStoredShimeji = () => {
   return localStorage.getItem("site_shimeji_img") || avatarAsset.url;
 };
 
-// --- COMPONENTE SHIMEJI CORREGIDO ---
+// --- COMPONENTE SHIMEJI ---
 function VirtualShimeji() {
   const [pos, setPos] = useState({ x: 50, y: window.innerHeight - 100 });
   const [isDragging, setIsDragging] = useState(false);
@@ -151,41 +147,35 @@ function VirtualShimeji() {
   );
 }
 
-// --- WIDGET DE MÚSICA ESTILO WINDOWS XP ---
-function MusicWidget() {
-  const [music, setMusic] = useState(getStoredMusic());
+// --- WIDGET DE SPOTIFY ESTILO WINDOWS XP ---
+function SpotifyWidget() {
+  const spotifyUrl = getStoredSpotify();
   const [minimized, setMinimized] = useState(false);
-  const audioRef = useRef<HTMLAudioElement>(null);
 
-  const togglePlay = () => {
-    const next = !music.isPlaying;
-    setMusic({ ...music, isPlaying: next });
-    localStorage.setItem("site_music", JSON.stringify({ ...music, isPlaying: next }));
-    if (audioRef.current) {
-      if (next) audioRef.current.play().catch(() => {});
-      else audioRef.current.pause();
-    }
-  };
+  if (!spotifyUrl) return null;
 
-  if (!music.url) return null;
+  // Asegurar que sea formato embed si el usuario pegó el link normal de spotify
+  let embedUrl = spotifyUrl;
+  if (spotifyUrl.includes("spotify.com") && !spotifyUrl.includes("/embed/")) {
+    embedUrl = spotifyUrl.replace("spotify.com/", "spotify.com/embed/");
+  }
 
   return (
-    <div style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 9997, width: '240px', background: '#ece9d8', border: '2px solid #0055ea', borderRadius: '5px 5px 0 0', boxShadow: '2px 2px 10px rgba(0,0,0,0.5)', fontFamily: 'Tahoma, sans-serif' }}>
+    <div style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 9997, width: '300px', background: '#ece9d8', border: '2px solid #0055ea', borderRadius: '5px 5px 0 0', boxShadow: '2px 2px 10px rgba(0,0,0,0.5)', fontFamily: 'Tahoma, sans-serif' }}>
       <div style={{ background: 'linear-gradient(to right, #0055ea, #1690ff)', color: 'white', padding: '4px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', fontWeight: 'bold' }}>
-        <span>🎵 Reproductor WinXP</span>
+        <span>🎵 Spotify - WinXP Player</span>
         <button onClick={() => setMinimized(!minimized)} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 'bold' }}>{minimized ? "□" : "_"}</button>
       </div>
       {!minimized && (
-        <div style={{ padding: '10px', background: '#f5f4f0', color: '#000', fontSize: '12px' }}>
-          <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: '8px' }}>
-            <b>Reproduciendo:</b> {music.title}
-          </div>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <Button size="sm" onClick={togglePlay} style={{ background: '#3d953d', color: 'white', height: '26px', fontSize: '11px' }}>
-              {music.isPlaying ? <Pause size={12} /> : <Play size={12} />} {music.isPlaying ? "Pausar" : "Reproducir"}
-            </Button>
-          </div>
-          <audio ref={audioRef} src={music.url} loop />
+        <div style={{ background: '#000', lineHeight: 0 }}>
+          <iframe 
+            src={embedUrl} 
+            width="100%" 
+            height="80" 
+            frameBorder="0" 
+            allow="encrypted-media"
+            title="Spotify Player"
+          />
         </div>
       )}
     </div>
@@ -578,7 +568,6 @@ function CommentThread({ comment, replies, adminMode, customEmojis, onReply, onD
     setShowEmojiPicker(false);
   };
 
-  // Renderizar contenido reemplazando tags de emojis por imágenes
   const renderFormattedContent = (text: string) => {
     const parts = text.split(/(\[emoji:[^\]]+\])/g);
     return parts.map((part, i) => {
@@ -797,7 +786,7 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
   const [newArtCategory, setNewArtCategory] = useState("Drawings");
   const [newArtImage, setNewArtImage] = useState("");
 
-  const [music, setMusic] = useState(getStoredMusic());
+  const [spotifyUrl, setSpotifyUrl] = useState(getStoredSpotify());
   const [shimejiImg, setShimejiImg] = useState(getStoredShimeji());
 
   const [todos, setTodos] = useState<{ id: string; text: string; done: boolean }[]>(() => JSON.parse(localStorage.getItem("admin_todos") || "[]"));
@@ -1049,14 +1038,13 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
 
       {activeTab === "musica" && (
         <div style={{ padding: '20px', background: '#0f203b', borderRadius: '8px', border: '1px solid #1e3a8a' }}>
-          <h3 style={{ marginBottom: '15px' }}><Music size={16} /> Widget de Música (Estilo WinXP)</h3>
-          <p style={{ color: '#8892b0', fontSize: '13px', marginBottom: '15px' }}>Pega el enlace directo a un archivo de audio (MP3 / OGG):</p>
-          <Input placeholder="Título de la canción..." value={music.title} onChange={(e) => setMusic({ ...music, title: e.target.value })} style={{ marginBottom: '10px' }} />
-          <Input placeholder="URL del audio (.mp3 o .ogg)..." value={music.url} onChange={(e) => setMusic({ ...music, url: e.target.value })} style={{ marginBottom: '15px' }} />
+          <h3 style={{ marginBottom: '15px' }}><Music size={16} /> Widget de Spotify (Playlist / Canción)</h3>
+          <p style={{ color: '#8892b0', fontSize: '13px', marginBottom: '15px' }}>Pega el enlace de Spotify de tu playlist (ej: https://open.spotify.com/playlist/...):</p>
+          <Input placeholder="Enlace de Spotify..." value={spotifyUrl} onChange={(e) => setSpotifyUrl(e.target.value)} style={{ marginBottom: '15px' }} />
           <Button variant="signal" onClick={() => {
-            localStorage.setItem("site_music", JSON.stringify(music));
-            alert("¡Reproductor de música actualizado!");
-          }}>GUARDAR MÚSICA</Button>
+            localStorage.setItem("site_spotify_url", spotifyUrl);
+            alert("¡Reproductor de Spotify actualizado!");
+          }}>GUARDAR REPRODUCTOR</Button>
         </div>
       )}
 
@@ -1231,7 +1219,7 @@ export function TeriApp() {
       {page === "sobre-mi" && <About />}
       {page === "contacto" && <Contact />}
       <VirtualShimeji />
-      <MusicWidget />
+      <SpotifyWidget />
       <footer className="system-footer"><span>MUNCHINE ONLINE!</span><span>ENLACES VERIFICADOS · ES · 01:23 P.M.</span><div><Play size={12} /> DEEP_SEA_SIGNAL.WAV</div></footer>
       <AdminLoginDialog
         open={adminLoginOpen}
