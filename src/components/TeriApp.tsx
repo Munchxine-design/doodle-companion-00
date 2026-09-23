@@ -113,7 +113,7 @@ const getStoredShimejiConfig = () => {
   };
 };
 
-// --- COMPONENTE SHIMEJI FINAL (CAPTURA NATIVA Y SALTO) ---
+// --- COMPONENTE SHIMEJI ADAPTADO PARA PC Y MÓVILES TÁCTILES ---
 function VirtualShimeji() {
   const [config, setConfig] = useState(getStoredShimejiConfig);
   const [pos, setPos] = useState({ x: 120, y: window.innerHeight - 90 });
@@ -122,10 +122,14 @@ function VirtualShimeji() {
   const [frameIndex, setFrameIndex] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [isJumping, setIsJumping] = useState(false);
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
 
   const dragOffsetRef = useRef({ x: 32, y: 32 });
 
   useEffect(() => {
+    // Detectar si es un dispositivo táctil
+    setIsTouchDevice(window.matchMedia("(pointer: coarse)").matches);
+
     const handleStorage = () => setConfig(getStoredShimejiConfig());
     window.addEventListener("storage", handleStorage);
     return () => window.removeEventListener("storage", handleStorage);
@@ -140,7 +144,7 @@ function VirtualShimeji() {
     return () => clearInterval(interval);
   }, [currentFrames.length, state]);
 
-  // IA Autónoma (cuando no se arrastra ni salta)
+  // IA Autónoma (en móviles solo camina / idle / salta; en PC también se puede arrastrar)
   useEffect(() => {
     if (isDragging || isJumping) return;
 
@@ -213,6 +217,9 @@ function VirtualShimeji() {
   }, [state, direction, isDragging, isJumping]);
 
   const handlePointerDown = (e: PointerEvent<HTMLDivElement>) => {
+    // Si es móvil, evitamos el arrastre para que funcione perfecto el toque/salto sin trabarse
+    if (isTouchDevice) return;
+    
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
     setIsDragging(true);
@@ -226,7 +233,7 @@ function VirtualShimeji() {
   };
 
   const handlePointerMove = (e: PointerEvent<HTMLDivElement>) => {
-    if (!isDragging) return;
+    if (isTouchDevice || !isDragging) return;
     setPos({
       x: e.clientX - dragOffsetRef.current.x,
       y: e.clientY - dragOffsetRef.current.y,
@@ -234,16 +241,16 @@ function VirtualShimeji() {
   };
 
   const handlePointerUp = (e: PointerEvent<HTMLDivElement>) => {
-    if (!isDragging) return;
+    if (isTouchDevice || !isDragging) return;
     try {
       e.currentTarget.releasePointerCapture(e.pointerId);
     } catch { /* ignore */ }
     setIsDragging(false);
-    setState("fall"); // Activa la caída al soltarlo
+    setState("fall");
   };
 
-  // Animación de salto al hacer clic sin arrastrar
-  const handleClick = () => {
+  // Animación de salto al hacer clic (PC) o toque (Móvil)
+  const triggerJump = () => {
     if (isJumping) return;
     setIsJumping(true);
     const randomAnim = Math.random() < 0.5 ? "click1" : "click2";
@@ -273,7 +280,7 @@ function VirtualShimeji() {
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
-      onClick={handleClick}
+      onClick={triggerJump}
       style={{
         position: 'fixed',
         left: `${pos.x}px`,
@@ -282,11 +289,11 @@ function VirtualShimeji() {
         width: '64px',
         height: '64px',
         userSelect: 'none',
-        cursor: isDragging ? 'grabbing' : 'grab',
+        cursor: isTouchDevice ? 'pointer' : (isDragging ? 'grabbing' : 'grab'),
         transform: direction === -1 && state !== "drag" ? 'scaleX(-1)' : 'scaleX(1)',
         touchAction: 'none',
       }}
-      title="¡Shimeji interactivo! Arrástrame o hazme clic"
+      title="¡Shimeji interactivo!"
     >
       <img 
         src={activeImage} 
