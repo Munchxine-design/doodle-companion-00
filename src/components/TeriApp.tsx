@@ -94,61 +94,171 @@ const getStoredSpotify = () => {
   return localStorage.getItem("site_spotify_url") || "";
 };
 
-const getStoredShimejiFrames = (): string[] => {
-  const saved = localStorage.getItem("site_shimeji_frames");
+const getStoredShimejiConfig = () => {
+  const saved = localStorage.getItem("site_shimeji_states");
+  const def = [avatarAsset.url];
   if (saved) {
-    try { 
-      const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    try {
+      return JSON.parse(saved);
     } catch { /* fallback */ }
   }
-  return [avatarAsset.url];
+  return {
+    walk: def,
+    climb: def,
+    fall: def,
+    drag: def,
+    idle: def,
+    click1: def,
+    click2: def,
+  };
 };
 
-// --- COMPONENTE SHIMEJI MÓVIL CON ANIMACIÓN DE FOTOGRAMAS ---
+// --- COMPONENTE SHIMEJI AVANZADO CON IA DE ESTADOS (Caminar, trepar, caer, arrastrar, idle y clics aleatorios) ---
 function VirtualShimeji() {
-  const [pos, setPos] = useState({ x: 100, y: window.innerHeight - 90 });
+  const [config, setConfig] = useState(getStoredShimejiConfig);
+  const [pos, setPos] = useState({ x: 120, y: window.innerHeight - 90 });
+  const [state, setState] = useState<"walk" | "climb" | "fall" | "drag" | "idle" | "click1" | "click2">("walk");
   const [direction, setDirection] = useState<1 | -1>(1);
   const [frameIndex, setFrameIndex] = useState(0);
-  const frames = getStoredShimejiFrames();
+  const [isDragging, setIsDragging] = useState(false);
+  const dragOffsetRef = useRef({ x: 0, y: 0 });
 
+  // Actualizar config si cambia desde admin
+  useEffect(() => {
+    const handleStorage = () => setConfig(getStoredShimejiConfig());
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
+  // Obtener frames actuales según el estado actual
+  const currentFrames = config[state] && config[state].length > 0 ? config[state] : [avatarAsset.url];
+
+  // Animación interna de fotogramas
   useEffect(() => {
     const interval = setInterval(() => {
-      setFrameIndex((prev) => (prev + 1) % frames.length);
-    }, 180);
+      setFrameIndex((prev) => (prev + 1) % currentFrames.length);
+    }, 150);
     return () => clearInterval(interval);
-  }, [frames.length]);
+  }, [currentFrames.length, state]);
 
+  // Máquina de estados (IA de comportamiento del Shimeji)
   useEffect(() => {
-    const moveInterval = setInterval(() => {
-      setPos((prev) => {
-        let nextX = prev.x + direction * 2;
-        let nextDir = direction;
+    if (isDragging) return;
 
+    const timer = setInterval(() => {
+      setState((currentState) => {
+        // Si está ejecutando animación de clic, dejar que termine un ciclo y volver a caminar/idle
+        if (currentState === "click1" || currentState === "click2") {
+          return "walk";
+        }
+
+        // Si está caminando, hay probabilidad de que se siente (idle) o empiece a trepar si llega a la pared
+        if (currentState === "walk") {
+          const rand = Math.random();
+          if (rand < 0.15) return "idle";
+        } else if (currentState === "idle") {
+          const rand = Math.random();
+          if (rand < 0.4) return "walk";
+        }
+        return currentState;
+      });
+    }, 4000);
+
+    return () => clearInterval(timer);
+  }, [isDragging]);
+
+  // Bucle físico de movimiento y gravedad
+  useEffect(() => {
+    if (isDragging) return;
+
+    const physicsInterval = setInterval(() => {
+      setPos((prev) => {
+        const groundLevel = window.innerHeight - 90;
         const rightLimit = window.innerWidth - 70;
         const leftLimit = 10;
 
-        if (nextX >= rightLimit) {
-          nextX = rightLimit;
-          nextDir = -1;
-        } else if (nextX <= leftLimit) {
-          nextX = leftLimit;
-          nextDir = 1;
+        let nextX = prev.x;
+        let nextY = prev.y;
+        let nextDir = direction;
+        let nextState = state;
+
+        if (state === "fall") {
+          nextY += 8;
+          if (nextY >= groundLevel) {
+            nextY = groundLevel;
+            nextState = "walk";
+          }
+        } else if (state === "climb") {
+          nextY -= 2;
+          if (nextY <= 50) {
+            nextState = "fall";
+          }
+        } else if (state === "walk") {
+          nextX += direction * 2;
+          if (nextX >= rightLimit) {
+            nextX = rightLimit;
+            nextDir = -1;
+            // Ocasionalmente trepar por la pared derecha
+            if (Math.random() < 0.5) nextState = "climb";
+          } else if (nextX <= leftLimit) {
+            nextX = leftLimit;
+            nextDir = 1;
+            if (Math.random() < 0.5) nextState = "climb";
+          }
         }
 
-        if (nextDir !== direction) {
-          setDirection(nextDir);
-        }
+        if (nextDir !== direction) setDirection(nextDir);
+        if (nextState !== state) setState(nextState);
 
-        return { x: nextX, y: window.innerHeight - 90 };
+        return { x: nextX, y: nextY };
       });
     }, 40);
 
-    return () => clearInterval(moveInterval);
-  }, [direction]);
+    return () => clearInterval(physicsInterval);
+  }, [state, direction, isDragging]);
+
+  // Eventos de arrastre con el mouse (Drag & Drop con animación de colgado)
+  const handlePointerDown = (e: PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(true);
+    setState("drag");
+    dragOffsetRef.current = {
+      x: e.clientX - pos.x,
+      y: e.clientY - pos.y,
+    };
+
+    const handlePointerMove = (moveEvent: globalThis.PointerEvent) => {
+      setPos({
+        x: moveEvent.clientX - dragOffsetRef.current.x,
+        y: moveEvent.clientY - dragOffsetRef.current.y,
+      });
+    };
+
+    const handlePointerUp = () => {
+      setIsDragging(false);
+      setState("fall"); // Al soltarlo cae por gravedad
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+  };
+
+  // Reacción al hacerle clic (elige aleatoriamente entre click1 y click2)
+  const handleClick = () => {
+    if (isDragging) return;
+    const randomAnim = Math.random() < 0.5 ? "click1" : "click2";
+    setState(randomAnim);
+    setFrameIndex(0);
+  };
+
+  const activeImage = currentFrames[frameIndex % currentFrames.length] || avatarAsset.url;
 
   return (
     <div
+      onPointerDown={handlePointerDown}
+      onClick={handleClick}
       style={{
         position: 'fixed',
         left: `${pos.x}px`,
@@ -157,15 +267,16 @@ function VirtualShimeji() {
         width: '64px',
         height: '64px',
         userSelect: 'none',
-        pointerEvents: 'none',
-        transform: direction === -1 ? 'scaleX(-1)' : 'scaleX(1)',
+        cursor: isDragging ? 'grabbing' : 'grab',
+        transform: direction === -1 && state !== "drag" ? 'scaleX(-1)' : 'scaleX(1)',
+        transition: isDragging ? 'none' : 'transform 0.1s',
       }}
-      title="¡Shimeji animado caminando!"
+      title="¡Shimeji interactivo! Arrástrame o hazme clic"
     >
       <img 
-        src={frames[frameIndex % frames.length] || avatarAsset.url} 
-        alt="Shimeji Animado" 
-        style={{ width: '100%', height: '100%', objectFit: 'contain', filter: 'drop-shadow(2px 4px 6px rgba(0,0,0,0.5))' }} 
+        src={activeImage} 
+        alt="Shimeji" 
+        style={{ width: '100%', height: '100%', objectFit: 'contain', filter: 'drop-shadow(2px 4px 6px rgba(0,0,0,0.5))', pointerEvents: 'none' }} 
       />
     </div>
   );
@@ -890,7 +1001,7 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
   const [newArtImage, setNewArtImage] = useState("");
 
   const [spotifyUrl, setSpotifyUrl] = useState(getStoredSpotify());
-  const [shimejiFrames, setShimejiFrames] = useState<string[]>(getStoredShimejiFrames());
+  const [shimejiConfig, setShimejiConfig] = useState(getStoredShimejiConfig());
 
   const [todos, setTodos] = useState<{ id: string; text: string; done: boolean }[]>(() => JSON.parse(localStorage.getItem("admin_todos") || "[]"));
   const [newTodoText, setNewTodoText] = useState("");
@@ -966,6 +1077,28 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
     const updated = portfolioItems.filter(i => i.id !== id);
     setPortfolioItems(updated);
     localStorage.setItem("site_portfolio", JSON.stringify(updated));
+  };
+
+  const handleShimejiStateUpload = (stateKey: string, e: ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const loaded: string[] = [];
+    let count = 0;
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        if (ev.target?.result) loaded.push(ev.target.result as string);
+        count++;
+        if (count === files.length) {
+          const updated = { ...shimejiConfig, [stateKey]: loaded };
+          setShimejiConfig(updated);
+          localStorage.setItem("site_shimeji_states", JSON.stringify(updated));
+          window.dispatchEvent(new Event("storage"));
+          alert(`¡Fotogramas para "${stateKey}" actualizados!`);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
   return (
@@ -1197,33 +1330,31 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
 
       {activeTab === "shimeji" && (
         <div style={{ padding: '20px', background: '#0f203b', borderRadius: '8px', border: '1px solid #1e3a8a' }}>
-          <h3 style={{ marginBottom: '15px' }}>Mascota Shimeji (Fotogramas Animados)</h3>
-          <p style={{ color: '#8892b0', fontSize: '13px', marginBottom: '15px' }}>Sube varios fotogramas PNG para animar los pasos de tu mascota:</p>
-          <label className="upload-button" style={{ background: '#1e3a8a', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', display: 'inline-block' }}>
-            <ImageIcon size={14} /> Seleccionar fotogramas PNG
-            <input type="file" accept="image/*" multiple onChange={(e) => {
-              const files = e.target.files;
-              if (!files || files.length === 0) return;
-              const loaded: string[] = [];
-              let count = 0;
-              Array.from(files).forEach((file) => {
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                  if (ev.target?.result) loaded.push(ev.target.result as string);
-                  count++;
-                  if (count === files.length) {
-                    setShimejiFrames(loaded);
-                    localStorage.setItem("site_shimeji_frames", JSON.stringify(loaded));
-                    alert("¡Fotogramas del Shimeji actualizados!");
-                  }
-                };
-                reader.readAsDataURL(file);
-              });
-            }} style={{ display: 'none' }} />
-          </label>
-          <div style={{ display: 'flex', gap: '10px', marginTop: '15px', flexWrap: 'wrap' }}>
-            {shimejiFrames.map((frame, idx) => (
-              <img key={idx} src={frame} alt={`Frame ${idx}`} style={{ width: '40px', height: '40px', objectFit: 'contain', background: '#0a192f', border: '1px solid #1e3a8a', borderRadius: '4px' }} />
+          <h3 style={{ marginBottom: '15px' }}>🐾 Configuración de Estados del Shimeji</h3>
+          <p style={{ color: '#8892b0', fontSize: '13px', marginBottom: '20px' }}>Sube los fotogramas PNG para cada estado físico y animación de tu mascota:</p>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '15px' }}>
+            {[
+              { key: "walk", label: "Caminar (Walk)" },
+              { key: "climb", label: "Trepar paredes (Climb)" },
+              { key: "fall", label: "Cayendo / Aire (Fall)" },
+              { key: "drag", label: "Colgando del cursor (Drag)" },
+              { key: "idle", label: "Sentado / Descanso (Idle)" },
+              { key: "click1", label: "Reacción Clic 1 (Aleatoria)" },
+              { key: "click2", label: "Reacción Clic 2 (Aleatoria)" },
+            ].map((stateItem) => (
+              <div key={stateItem.key} style={{ background: '#0a192f', padding: '12px', borderRadius: '8px', border: '1px solid #1e3a8a' }}>
+                <span style={{ fontSize: '13px', fontWeight: 'bold', display: 'block', marginBottom: '8px', color: '#69a2ff' }}>{stateItem.label}</span>
+                <label className="upload-button" style={{ background: '#1e3a8a', padding: '6px 12px', borderRadius: '4px', fontSize: '11px', cursor: 'pointer', display: 'inline-block', marginBottom: '8px' }}>
+                  <ImageIcon size={14} /> Subir PNGs ({shimejiConfig[stateItem.key]?.length || 0} frames)
+                  <input type="file" accept="image/*" multiple onChange={(e) => handleShimejiStateUpload(stateItem.key, e)} style={{ display: 'none' }} />
+                </label>
+                <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginTop: '5px' }}>
+                  {(shimejiConfig[stateItem.key] || []).map((imgUrl: string, idx: number) => (
+                    <img key={idx} src={imgUrl} alt="" style={{ width: '32px', height: '32px', objectFit: 'contain', background: '#000', borderRadius: '3px' }} />
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </div>
