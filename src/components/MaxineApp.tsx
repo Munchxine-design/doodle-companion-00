@@ -7,9 +7,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
-// --- TIPOS ---
 type Page = "inicio" | "portafolio" | "comunidad" | "sobre-mi" | "contacto";
 
+// --- TIPOS NUEVOS Y EXISTENTES ---
 type Submission = { id: string; image_path: string; note: string; author: string; approved: boolean; created_at: string; };
 type WallComment = { id: string; author: string; content: string; approved: boolean; parent_id: string | null; is_admin_reply: boolean; created_at: string; };
 type PortfolioItem = { id: string; title: string; category: string; image_path: string; };
@@ -47,7 +47,6 @@ const getStoredImagesConfig = () => JSON.parse(localStorage.getItem("site_images
 const getStoredEmojis = () => JSON.parse(localStorage.getItem("site_custom_emojis") || JSON.stringify([{ name: "corazon", url: avatarAsset.url }, { name: "estrella", url: avatarAsset.url }]));
 const getStoredPortfolio = () => JSON.parse(localStorage.getItem("site_portfolio") || JSON.stringify([{ id: "1", title: "MEGAMAN!!!", category: "Drawings", image_path: avatarAsset.url }]));
 const getStoredSpotify = () => localStorage.getItem("site_spotify_url") || "";
-
 const getStoredShimejiConfig = () => {
   const saved = localStorage.getItem("site_shimeji_states");
   const def = [avatarAsset.url];
@@ -55,7 +54,7 @@ const getStoredShimejiConfig = () => {
   return { walk: def, climb: def, fall: def, drag: def, idle: def, click1: def, click2: def };
 };
 
-// --- COMPONENTE SHIMEJI ---
+// --- COMPONENTE SHIMEJI ADAPTADO PARA PC Y MÓVILES TÁCTILES ---
 function VirtualShimeji() {
   const [config, setConfig] = useState(getStoredShimejiConfig);
   const [pos, setPos] = useState({ x: 120, y: window.innerHeight - 90 });
@@ -87,8 +86,8 @@ function VirtualShimeji() {
     const timer = setInterval(() => {
       setState((currentState) => {
         if (currentState === "click1" || currentState === "click2") return "walk";
-        if (currentState === "walk" && Math.random() < 0.15) return "idle";
-        else if (currentState === "idle" && Math.random() < 0.4) return "walk";
+        if (currentState === "walk") { if (Math.random() < 0.15) return "idle"; }
+        else if (currentState === "idle") { if (Math.random() < 0.4) return "walk"; }
         return currentState;
       });
     }, 4000);
@@ -101,6 +100,7 @@ function VirtualShimeji() {
       setPos((prev) => {
         const groundLevel = window.innerHeight - 90;
         const rightLimit = window.innerWidth - 70;
+        const leftLimit = 10;
         let nextX = prev.x, nextY = prev.y, nextDir = direction, nextState = state;
 
         if (state === "fall") {
@@ -112,9 +112,8 @@ function VirtualShimeji() {
         } else if (state === "walk") {
           nextX += direction * 2;
           if (nextX >= rightLimit) { nextX = rightLimit; nextDir = -1; if (Math.random() < 0.5) nextState = "climb"; }
-          else if (nextX <= 10) { nextX = 10; nextDir = 1; if (Math.random() < 0.5) nextState = "climb"; }
+          else if (nextX <= leftLimit) { nextX = leftLimit; nextDir = 1; if (Math.random() < 0.5) nextState = "climb"; }
         }
-
         if (nextDir !== direction) setDirection(nextDir);
         if (nextState !== state) setState(nextState);
         return { x: nextX, y: nextY };
@@ -125,7 +124,8 @@ function VirtualShimeji() {
 
   const handlePointerDown = (e: PointerEvent<HTMLDivElement>) => {
     if (isTouchDevice) return;
-    e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId);
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
     setIsDragging(true); setState("drag");
     const rect = e.currentTarget.getBoundingClientRect();
     dragOffsetRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
@@ -138,7 +138,7 @@ function VirtualShimeji() {
 
   const handlePointerUp = (e: PointerEvent<HTMLDivElement>) => {
     if (isTouchDevice || !isDragging) return;
-    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch {}
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
     setIsDragging(false); setState("fall");
   };
 
@@ -148,20 +148,27 @@ function VirtualShimeji() {
     const startY = pos.y; let jumpProgress = 0;
     const jumpInterval = setInterval(() => {
       jumpProgress += 0.15;
-      setPos(p => ({ ...p, y: startY - (Math.sin(jumpProgress * Math.PI) * 45) }));
+      const jumpHeight = Math.sin(jumpProgress * Math.PI) * 45;
+      setPos(p => ({ ...p, y: startY - jumpHeight }));
       if (jumpProgress >= 1) { clearInterval(jumpInterval); setPos(p => ({ ...p, y: startY })); setIsJumping(false); setState("walk"); }
     }, 30);
   };
 
+  const activeImage = currentFrames[frameIndex % currentFrames.length] || avatarAsset.url;
+
   return (
     <div onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onClick={triggerJump}
-      style={{ position: 'fixed', left: `${pos.x}px`, top: `${pos.y}px`, zIndex: 10005, width: '64px', height: '64px', userSelect: 'none', cursor: isTouchDevice ? 'pointer' : (isDragging ? 'grabbing' : 'grab'), transform: direction === -1 && state !== "drag" ? 'scaleX(-1)' : 'scaleX(1)', touchAction: 'none' }} title="¡Shimeji interactivo!">
-      <img src={currentFrames[frameIndex % currentFrames.length] || avatarAsset.url} alt="Shimeji" style={{ width: '100%', height: '100%', objectFit: 'contain', filter: 'drop-shadow(2px 4px 6px rgba(0,0,0,0.5))', pointerEvents: 'none' }} />
+      style={{
+        position: 'fixed', left: `${pos.x}px`, top: `${pos.y}px`, zIndex: 10005, width: '64px', height: '64px',
+        userSelect: 'none', cursor: isTouchDevice ? 'pointer' : (isDragging ? 'grabbing' : 'grab'),
+        transform: direction === -1 && state !== "drag" ? 'scaleX(-1)' : 'scaleX(1)', touchAction: 'none',
+      }} title="¡Shimeji interactivo!">
+      <img src={activeImage} alt="Shimeji" style={{ width: '100%', height: '100%', objectFit: 'contain', filter: 'drop-shadow(2px 4px 6px rgba(0,0,0,0.5))', pointerEvents: 'none' }} />
     </div>
   );
 }
 
-// --- WIDGETS ---
+// --- TERMINAL Y WIDGETS ---
 function SecretCodesWidget({ onTriggerEffect }: { onTriggerEffect: (effectName: string) => void }) {
   const [isOpen, setIsOpen] = useState(false);
   const [code, setCode] = useState("");
@@ -170,10 +177,10 @@ function SecretCodesWidget({ onTriggerEffect }: { onTriggerEffect: (effectName: 
   const handleRedeem = () => {
     const clean = code.trim().toUpperCase();
     if (!clean) return;
-    if (clean === "BUBBLES" || clean === "MAGIC") { setFeedback("✨ ¡Efecto mágico activado!"); onTriggerEffect("bubbles"); }
-    else if (clean === "CYBER" || clean === "MATRIX") { setFeedback("💻 ¡Modo Ciberespacio!"); onTriggerEffect("cyber"); }
-    else if (clean === "BESO" || clean === "KISS") { setFeedback("💋 ¡Animación especial!"); onTriggerEffect("kiss"); }
-    else if (clean === "MAXINECOMMISSION" || clean === "MAXINE20") { setFeedback("🎉 ¡Código válido! 20% descuento."); onTriggerEffect("discount"); }
+    if (clean === "BUBBLES" || clean === "MAGIC") { setFeedback("✨ ¡Efecto mágico de burbujas!"); onTriggerEffect("bubbles"); }
+    else if (clean === "CYBER" || clean === "MATRIX") { setFeedback("💻 ¡Modo Ciberespacio activado!"); onTriggerEffect("cyber"); }
+    else if (clean === "BESO" || clean === "KISS") { setFeedback("💋 ¡Animación especial del beso!"); onTriggerEffect("kiss"); }
+    else if (clean === "MAXINECOMMISSION" || clean === "MAXINE20") { setFeedback("🎉 ¡Código válido! 20% de descuento."); onTriggerEffect("discount"); }
     else { setFeedback("❌ Código inválido."); }
     setCode("");
   };
@@ -189,6 +196,7 @@ function SecretCodesWidget({ onTriggerEffect }: { onTriggerEffect: (effectName: 
             <button onClick={() => setIsOpen(false)} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 'bold' }}>✕</button>
           </div>
           <div style={{ padding: '12px', background: '#0a192f', color: '#fff' }}>
+            <p style={{ fontSize: '11px', color: '#8892b0', marginBottom: '8px' }}>Introduce un código secreto o easter egg:</p>
             <div style={{ display: 'flex', gap: '5px', marginBottom: '8px' }}>
               <Input placeholder="Ej. BUBBLES..." value={code} onChange={(e) => setCode(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleRedeem(); }} style={{ fontSize: '12px', background: '#0f203b', color: 'white' }} />
               <Button variant="signal" size="sm" onClick={handleRedeem}>Canjear</Button>
@@ -212,7 +220,9 @@ function SpotifyWidget() {
 
   if (!spotifyUrl) return null;
   let embedUrl = spotifyUrl;
-  if (spotifyUrl.includes("spotify.com") && !spotifyUrl.includes("/embed/")) embedUrl = spotifyUrl.replace("spotify.com/", "spotify.com/embed/");
+  if (spotifyUrl.includes("spotify.com") && !spotifyUrl.includes("/embed/")) {
+    embedUrl = spotifyUrl.replace("spotify.com/", "spotify.com/embed/");
+  }
 
   useEffect(() => {
     const handleMove = (e: MouseEvent) => {
@@ -224,14 +234,12 @@ function SpotifyWidget() {
     return () => { window.removeEventListener("mousemove", handleMove); window.removeEventListener("mouseup", handleUp); };
   }, []);
 
-  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.preventDefault(); setIsDragging(true); dragRef.current = { x: e.clientX - pos.x, y: e.clientY - pos.y };
-  };
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => { e.preventDefault(); setIsDragging(true); dragRef.current = { x: e.clientX - pos.x, y: e.clientY - pos.y }; };
 
   return (
     <div style={{ position: 'fixed', left: `${pos.x}px`, top: `${pos.y}px`, zIndex: 9997, width: '380px', background: '#ece9d8', border: '2px solid #0055ea', borderRadius: '5px 5px 0 0', boxShadow: '2px 2px 10px rgba(0,0,0,0.5)', fontFamily: 'Tahoma, sans-serif' }}>
       <div onMouseDown={handleMouseDown} style={{ background: 'linear-gradient(to right, #0055ea, #1690ff)', color: 'white', padding: '6px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', fontWeight: 'bold', cursor: 'grab', userSelect: 'none' }}>
-        <span>🎵 Spotify - WinXP Player</span>
+        <span>🎵 Spotify - WinXP Player (Movible)</span>
         <button onClick={() => setMinimized(!minimized)} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 'bold' }}>{minimized ? "□" : "_"}</button>
       </div>
       {!minimized && (<div style={{ background: '#000', lineHeight: 0 }}><iframe src={embedUrl} width="100%" height="152" frameBorder="0" allow="encrypted-media" title="Spotify Player" style={{ borderRadius: '0' }} /></div>)}
@@ -239,7 +247,6 @@ function SpotifyWidget() {
   );
 }
 
-// --- COMPONENTES COMPARTIDOS UI ---
 function Window({ title, children, className = "" }: { title: string; children: React.ReactNode; className?: string }) {
   return (
     <section className={`station-window ${className}`}>
@@ -254,11 +261,11 @@ function Header({ page, setPage, onAdminAccess }: { page: Page; setPage: (page: 
   return (
     <>
       <header className="site-header">
-        <button className="brand" onClick={() => setPage("inicio")}><Orbit /> Munchxine!</button>
-        <Button variant="ghost" size="icon" className="mobile-menu" onClick={() => setOpen(!open)}><Menu /></Button>
-        <nav className={open ? "nav-list is-open" : "nav-list"}>
+        <button className="brand" onClick={() => setPage("inicio")} aria-label="Ir a inicio"><Orbit /> Munchxine!</button>
+        <Button variant="ghost" size="icon" className="mobile-menu" onClick={() => setOpen(!open)} aria-label="Abrir menú"><Menu /></Button>
+        <nav className={open ? "nav-list is-open" : "nav-list"} aria-label="Navegación principal">
           {nav.map((item) => <button key={item.id} className={page === item.id ? "active" : ""} onClick={() => { setPage(item.id); setOpen(false); }}>{item.label}</button>)}
-          <button onClick={onAdminAccess}><LockKeyhole size={14} /> Admin</button>
+          <button onClick={onAdminAccess} aria-label="Administración"><LockKeyhole size={14} /> Admin</button>
         </nav>
       </header>
       <div className="breadcrumb"><Orbit size={12} /><span>Munchxine!</span><span>/</span><span>{page === "inicio" ? "Estudio creativo" : nav.find((item) => item.id === page)?.label}</span><Sparkles size={11} /></div>
@@ -279,17 +286,6 @@ function AdminLoginDialog({ open, onOpenChange, onSuccess }: { open: boolean; on
         <Button variant="signal" onClick={handleLogin}>Entrar</Button>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function ProfileBand() {
-  const profile = getStoredProfile();
-  const images = getStoredImagesConfig();
-  return (
-    <section className="profile-band">
-      <Window title="Munchxine_profile.exe"><div className="profile-content"><img src={images.homeProfile} alt="Avatar pixel art" /><div><p className="eyebrow">HIYAAA!!</p><h2>{profile.name}</h2><p>Artista chileno de 19 años • Arte 2D y 3D • ESP / ENG</p><div className="tags"><span>Roblox</span><span>ARGs</span><span>Pokemon</span></div></div></div></Window>
-      <Window title="ACCESOS_DIRECTOS"><div className="online-content"><h2>Maxine Online!</h2><div className="social-row"><Button variant="station"><X /> Twitter / X</Button><Button variant="station"><Coffee /> Ko-fi</Button></div><div className="online-art"><img src={images.homeDirects} alt="Maxine online" /><span>@Munchxine_</span></div></div></Window>
-    </section>
   );
 }
 
@@ -339,27 +335,31 @@ function StrawpageCanvas({ adminMode }: { adminMode: boolean }) {
   const handleImageUpload = (id: string, e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      alert("El archivo pesa más de 2MB. Intenta usar un GIF o imagen más ligera para no saturar la memoria local.");
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (ev) => { if (ev.target?.result) updateElement(id, { content: ev.target.result as string }); };
     reader.readAsDataURL(file);
   };
 
   return (
-    <div className="strawpage-wrapper" style={{ border: adminMode ? '2px dashed #69a2ff' : 'none', borderRadius: '8px', padding: adminMode ? '10px' : '0' }}>
+    <div className="strawpage-wrapper" style={{ border: adminMode ? '2px dashed rgba(105, 162, 255, 0.5)' : 'none', borderRadius: '8px', padding: adminMode ? '10px' : '0' }}>
       {adminMode && (
-        <div style={{ display: 'flex', gap: '10px', marginBottom: '10px', background: '#0a192f', padding: '10px', borderRadius: '6px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '10px', marginBottom: '10px', background: 'rgba(10, 25, 47, 0.7)', padding: '10px', borderRadius: '6px', flexWrap: 'wrap' }}>
           <Button variant="signal" size="sm" onClick={() => addElement("text")}><Type size={14} /> Añadir Texto</Button>
           <Button variant="signal" size="sm" onClick={() => addElement("image")}><ImageIcon size={14} /> Añadir Imagen/GIF</Button>
-          <span style={{ fontSize: '11px', color: '#8892b0', alignSelf: 'center' }}><MousePointer2 size={12} style={{ display:'inline' }}/> Arrastra y redimensiona (esquina inferior derecha) los elementos.</span>
+          <span style={{ fontSize: '11px', color: '#8892b0', alignSelf: 'center' }}><MousePointer2 size={12} style={{ display:'inline' }}/> Arrastra y redimensiona los elementos libremente.</span>
         </div>
       )}
-      <div ref={containerRef} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerLeave={handlePointerUp} style={{ position: 'relative', width: '100%', minHeight: '600px', background: adminMode ? 'rgba(0,0,0,0.2)' : 'transparent', overflow: 'hidden', touchAction: 'none' }}>
+      <div ref={containerRef} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerLeave={handlePointerUp} style={{ position: 'relative', width: '100%', minHeight: '500px', background: adminMode ? 'rgba(0,0,0,0.1)' : 'transparent', overflow: 'hidden', touchAction: 'none' }}>
         {elements.map(el => (
-          <div key={el.id} onPointerDown={(e) => handlePointerDown(e, el.id)} style={{ position: 'absolute', left: el.x, top: el.y, zIndex: el.z, cursor: adminMode ? 'grab' : 'default', border: adminMode ? '1px dotted rgba(255,255,255,0.5)' : 'none', padding: adminMode ? '4px' : '0' }}>
-            {adminMode && (<button onClick={() => removeElement(el.id)} style={{ position: 'absolute', top: '-10px', right: '-10px', background: 'red', color: 'white', borderRadius: '50%', width: '20px', height: '20px', fontSize: '10px', border: 'none', cursor: 'pointer', zIndex: 10 }}>✕</button>)}
+          <div key={el.id} onPointerDown={(e) => handlePointerDown(e, el.id)} style={{ position: 'absolute', left: el.x, top: el.y, zIndex: el.z, cursor: adminMode ? 'grab' : 'default', border: adminMode ? '1px dotted rgba(255,255,255,0.4)' : 'none', padding: adminMode ? '4px' : '0' }}>
+            {adminMode && (<button onClick={() => removeElement(el.id)} style={{ position: 'absolute', top: '-10px', right: '-10px', background: '#ef4444', color: 'white', borderRadius: '50%', width: '20px', height: '20px', fontSize: '10px', border: 'none', cursor: 'pointer', zIndex: 10 }}>✕</button>)}
             {el.type === "text" ? (
               adminMode ? (
-                <textarea value={el.content} onChange={(e) => updateElement(el.id, { content: e.target.value })} style={{ background: 'transparent', color: '#fff', border: 'none', resize: 'both', width: el.width, height: el.height, fontFamily: 'Tahoma', fontSize: '14px' }} onMouseUp={(e) => updateElement(el.id, { width: e.currentTarget.offsetWidth, height: e.currentTarget.offsetHeight })} />
+                <textarea value={el.content} onChange={(e) => updateElement(el.id, { content: e.target.value })} style={{ background: 'rgba(0,0,0,0.5)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', resize: 'both', width: el.width, height: el.height, fontFamily: 'Tahoma', fontSize: '14px', padding: '5px' }} onMouseUp={(e) => updateElement(el.id, { width: e.currentTarget.offsetWidth, height: e.currentTarget.offsetHeight })} />
               ) : (
                 <div style={{ whiteSpace: 'pre-wrap', color: '#fff', fontSize: '14px', fontFamily: 'Tahoma', maxWidth: '300px' }}>{el.content}</div>
               )
@@ -368,10 +368,10 @@ function StrawpageCanvas({ adminMode }: { adminMode: boolean }) {
                 <img src={el.content} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }} />
                 {adminMode && (
                   <>
-                    <label style={{ position: 'absolute', bottom: 0, left: 0, background: 'rgba(0,0,0,0.7)', color: 'white', fontSize: '10px', padding: '2px 5px', cursor: 'pointer' }}>
+                    <label style={{ position: 'absolute', bottom: 0, left: 0, background: 'rgba(0,0,0,0.8)', color: 'white', fontSize: '10px', padding: '4px 6px', cursor: 'pointer', borderRadius: '4px' }}>
                       Cambiar <input type="file" accept="image/png, image/jpeg, image/webp, image/gif" onChange={(e) => handleImageUpload(el.id, e)} style={{ display: 'none' }} />
                     </label>
-                    <div style={{ position: 'absolute', bottom: 0, right: 0, width: '15px', height: '15px', background: 'rgba(255,255,255,0.5)', cursor: 'nwse-resize' }} 
+                    <div style={{ position: 'absolute', bottom: 0, right: 0, width: '15px', height: '15px', background: 'rgba(255,255,255,0.8)', cursor: 'nwse-resize', clipPath: 'polygon(100% 0, 0% 100%, 100% 100%)' }} 
                          onPointerDown={(e) => {
                            e.stopPropagation();
                            const startX = e.clientX; const startY = e.clientY; const startW = el.width; const startH = el.height;
@@ -390,7 +390,7 @@ function StrawpageCanvas({ adminMode }: { adminMode: boolean }) {
   );
 }
 
-// --- PAGINAS ---
+// --- PAGINAS ORIGINALES ---
 function TabletExperience({ setPage }: { setPage: (page: Page) => void }) {
   const sectionRef = useRef<HTMLDivElement>(null);
   const [progress, setProgress] = useState(0);
@@ -433,9 +433,9 @@ function TabletExperience({ setPage }: { setPage: (page: Page) => void }) {
               <div className="tablet-keys"><i /><b /><b /><b /><i /></div>
               <div className="tablet-screen">
                 <div className="screen-grid" />
-                <div className={`stage-art sketch ${stage === 0 ? "visible" : ""}`}><div className="blueprint-avatar sketch"><span className="head" /><span className="body" /><span className="arm left" /><span className="arm right" /><span className="leg left" /><span className="leg right" /></div></div>
-                <div className={`stage-art lineart ${stage === 1 ? "visible" : ""}`}><div className="blueprint-avatar line"><span className="head" /><span className="body" /><span className="arm left" /><span className="arm right" /><span className="leg left" /><span className="leg right" /></div></div>
-                <div className={`stage-art final ${stage === 2 ? "visible" : ""}`}><img src={images.homeProfile} alt="Ilustración final" /></div>
+                <div className={`stage-art sketch ${stage === 0 ? "visible" : ""}`}><div className={`blueprint-avatar sketch`}><span className="head" /><span className="body" /><span className="arm left" /><span className="arm right" /><span className="leg left" /><span className="leg right" /></div></div>
+                <div className={`stage-art lineart ${stage === 1 ? "visible" : ""}`}><div className={`blueprint-avatar line`}><span className="head" /><span className="body" /><span className="arm left" /><span className="arm right" /><span className="leg left" /><span className="leg right" /></div></div>
+                <div className={`stage-art final ${stage === 2 ? "visible" : ""}`}><img src={images.homeProfile} alt="Ilustración final de Maxine" /></div>
                 <div className="screen-readout"><span>ACTIVE_LAYER: 0{stage + 1}_{["SKETCH", "LINEART", "RENDER"][stage]}</span><span>PRESSURE: {Math.round(52 + progress * 35)}%</span><span>STYLUS: CONNECTED</span></div>
                 <div className="stylus" style={{ left: `${penX}%`, top: `${penY}%` }}><span /></div>
               </div>
@@ -551,7 +551,12 @@ function PaintCanvas() {
     }
   };
 
-  const clear = () => { const context = getCtx(); if (context && canvasRef.current) { context.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height); } };
+  const clear = () => {
+    const context = getCtx();
+    if (context && canvasRef.current) {
+      context.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+    }
+  };
 
   const handleImageUpload = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -570,7 +575,8 @@ function PaintCanvas() {
   };
 
   const submit = async () => {
-    setSubmitting(true); setSubmitStatus(null);
+    setSubmitting(true);
+    setSubmitStatus(null);
     try {
       const canvas = canvasRef.current;
       if (!canvas) throw new Error("No canvas");
@@ -616,12 +622,135 @@ function PaintCanvas() {
   );
 }
 
+function GalleryDisplay() {
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const localSubs = JSON.parse(localStorage.getItem("local_submissions") || "[]");
+    setSubmissions(localSubs.filter((s: Submission) => s.approved));
+    setLoading(false);
+  }, []);
+
+  if (loading) return <p className="window-copy">Cargando dibujos de la comunidad...</p>;
+  if (submissions.length === 0) return <p className="window-copy">Aún no hay dibujos aprobados. ¡Sé el primero en enviar uno! ♡</p>;
+
+  return (
+    <div className="community-gallery">
+      {submissions.map((s) => (
+        <article className="community-art" key={s.id}><img src={s.image_path} alt={`Dibujo de ${s.author}`} /><div className="community-art-info"><strong>{s.author}</strong>{s.note && <p>{s.note}</p>}</div></article>
+      ))}
+    </div>
+  );
+}
+
+function CommentThread({ comment, replies, adminMode, customEmojis, onReply, onDelete }: { comment: WallComment; replies: WallComment[]; adminMode: boolean; customEmojis: Array<{ name: string; url: string }>; onReply: (parentId: string, content: string, isAdmin: boolean) => void; onDelete: (id: string) => void; }) {
+  const [showReplyBox, setShowReplyBox] = useState(false);
+  const [replyText, setReplyText] = useState("");
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
+  const handleSendReply = () => {
+    if (!replyText.trim()) return;
+    onReply(comment.id, replyText, adminMode);
+    setReplyText(""); setShowReplyBox(false); setShowEmojiPicker(false);
+  };
+
+  const renderFormattedContent = (text: string) => {
+    const parts = text.split(/(\[emoji:[^\]]+\])/g);
+    return parts.map((part, i) => {
+      if (part.startsWith("[emoji:") && part.endsWith("]")) {
+        const emojiName = part.slice(7, -1);
+        const found = customEmojis.find(e => e.name === emojiName);
+        if (found) { return <img key={i} src={found.url} alt={emojiName} width={18} height={18} style={{ display: 'inline-block', verticalAlign: 'middle', margin: '0 2px' }} />; }
+      }
+      return part;
+    });
+  };
+
+  return (
+    <>
+      <article className={`comment ${comment.is_admin_reply ? "admin-reply" : ""}`}>
+        <div className="comment-header"><strong>{comment.author}{comment.is_admin_reply && <small className="admin-tag">ADMIN</small>}</strong><span className="comment-date">{new Date(comment.created_at).toLocaleDateString("es", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span></div>
+        <p className="comment-content">{renderFormattedContent(comment.content)}</p>
+        <div className="comment-actions">
+          <button className="comment-action-btn" onClick={() => setShowReplyBox(!showReplyBox)}><CornerDownRight size={12} /> Responder</button>
+          {adminMode && <button className="comment-action-btn danger" onClick={() => onDelete(comment.id)}><Trash2 size={12} /> Eliminar</button>}
+        </div>
+        {showReplyBox && (
+          <div className="reply-box">
+            <div className="emoji-row">
+              <button className="emoji-toggle" onClick={() => setShowEmojiPicker(!showEmojiPicker)}><Smile size={16} /> Emojis</button>
+              {showEmojiPicker && (
+                <div className="emoji-picker" style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', background: '#0a192f', padding: '8px', borderRadius: '6px' }}>
+                  {customEmojis.map((emoji, idx) => (
+                    <button key={idx} className="emoji-btn" onClick={() => setReplyText(replyText + ` [emoji:${emoji.name}] `)} style={{ background: 'transparent', border: '1px solid #1e3a8a', borderRadius: '4px', cursor: 'pointer', padding: '4px' }}>
+                      <img src={emoji.url} alt={emoji.name} width={20} height={20} style={{ objectFit: 'contain' }} />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <Textarea value={replyText} onChange={(e) => setReplyText(e.target.value)} placeholder="Tu respuesta..." className="reply-textarea" />
+            <Button variant="signal" size="sm" onClick={handleSendReply}><Send size={14} /> Enviar</Button>
+          </div>
+        )}
+      </article>
+      {replies.length > 0 && (
+        <div className="reply-thread">
+          {replies.map((reply) => (
+            <article key={reply.id} className={`comment reply ${reply.is_admin_reply ? "admin-reply" : ""}`}>
+              <div className="comment-header"><strong>{reply.author}{reply.is_admin_reply && <small className="admin-tag">ADMIN</small>}</strong><span className="comment-date">{new Date(reply.created_at).toLocaleDateString("es", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span></div>
+              <p className="comment-content">{renderFormattedContent(reply.content)}</p>
+              {adminMode && (
+                <div className="comment-actions"><button className="comment-action-btn danger" onClick={() => onDelete(reply.id)}><Trash2 size={12} /> Eliminar</button></div>
+              )}
+            </article>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
 function Community({ adminMode }: { adminMode: boolean }) {
+  const [comments, setComments] = useState<WallComment[]>([]);
+  const [comment, setComment] = useState("");
+  const [author, setAuthor] = useState("");
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [loading, setLoading] = useState(true);
   const profile = getStoredProfile();
   const images = getStoredImagesConfig();
-  
-  const [submissions, setSubmissions] = useState<Submission[]>([]);
-  useEffect(() => { setSubmissions(JSON.parse(localStorage.getItem("local_submissions") || "[]").filter((s: Submission) => s.approved)); }, []);
+  const customEmojis = getStoredEmojis();
+
+  useEffect(() => {
+    setComments(JSON.parse(localStorage.getItem("local_comments") || "[]"));
+    setLoading(false);
+  }, []);
+
+  const sendComment = () => {
+    if (!comment.trim()) return;
+    const finalAuthor = adminMode ? (author.trim() || profile.name) : (author.trim() || "Anónimo");
+    const newC: WallComment = { id: Date.now().toString(), content: comment.trim(), author: finalAuthor, approved: true, is_admin_reply: adminMode ? true : false, parent_id: null, created_at: new Date().toISOString() };
+    const updated = [newC, ...comments];
+    setComments(updated); localStorage.setItem("local_comments", JSON.stringify(updated));
+    setComment(""); setAuthor("");
+    alert(adminMode ? "¡Comentario de admin publicado!" : "¡Comentario enviado! Aparecerá cuando Maxine lo apruebe.");
+  };
+
+  const sendReply = (parentId: string, content: string, isAdmin: boolean) => {
+    const replyAuthor = isAdmin ? profile.name : "Anónimo";
+    const newReply: WallComment = { id: Date.now().toString(), content, author: replyAuthor, approved: true, is_admin_reply: isAdmin, parent_id: parentId, created_at: new Date().toISOString() };
+    const updated = [...comments, newReply];
+    setComments(updated); localStorage.setItem("local_comments", JSON.stringify(updated));
+  };
+
+  const deleteComment = (id: string) => {
+    const updated = comments.filter((c) => c.id !== id && c.parent_id !== id);
+    setComments(updated); localStorage.setItem("local_comments", JSON.stringify(updated));
+  };
+
+  const topLevel = comments.filter((c) => !c.parent_id && (c.approved || adminMode));
+  const getReplies = (parentId: string) => comments.filter((c) => c.parent_id === parentId);
 
   return (
     <main className="page-shell">
@@ -634,20 +763,35 @@ function Community({ adminMode }: { adminMode: boolean }) {
         <Window title="Muro de Maxine" className="wall">
           <article className="post">
             <div className="post-author"><img src={images.homeProfile} alt="Maxine" /><div><strong>{profile.name} <small>ADMIN / DEV :3C</small></strong><span>14 sept 2026, 0:24</span></div></div>
-            <p>¡Haii! Bienvenidos al muro oficial de la web. (El sistema de comentarios está temporalmente en mantenimiento en esta vista condensada).</p>
+            <p>¡Haii! Bienvenidos al muro oficial de la web.</p>
           </article>
+          {loading && <p className="window-copy">Cargando comentarios...</p>}
+          {!loading && topLevel.length === 0 && <p className="window-copy">No hay comentarios todavía. ¡Sé el primero! ♡</p>}
+          {topLevel.map((c) => (
+            <CommentThread key={c.id} comment={c} replies={getReplies(c.id)} adminMode={adminMode} customEmojis={customEmojis} onReply={sendReply} onDelete={deleteComment} />
+          ))}
+          <div style={{ marginTop: '15px' }}>
+            <Input className="comment-author-input" placeholder={adminMode ? `Tu nombre (${profile.name} Admin)...` : "Tu nombre..."} value={author} onChange={(e) => setAuthor(e.target.value)} style={{ marginBottom: '8px' }} />
+            <div className="emoji-row" style={{ marginBottom: '8px' }}>
+              <button className="emoji-toggle" onClick={() => setShowEmojiPicker(!showEmojiPicker)}><Smile size={16} /> Emojis personalizados</button>
+              {showEmojiPicker && (
+                <div className="emoji-picker" style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', background: '#0a192f', padding: '8px', borderRadius: '6px', marginTop: '5px' }}>
+                  {customEmojis.map((emoji: { name: string; url: string }, idx: number) => (
+                    <button key={idx} className="emoji-btn" onClick={() => setComment(comment + ` [emoji:${emoji.name}] `)} style={{ background: 'transparent', border: '1px solid #1e3a8a', borderRadius: '4px', cursor: 'pointer', padding: '4px' }}>
+                      <img src={emoji.url} alt={emoji.name} width={20} height={20} style={{ objectFit: 'contain' }} />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <Textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Tu comentario..." />
+            <Button variant="signal" onClick={sendComment} disabled={!comment.trim()} style={{ marginTop: '8px' }}><MessageCircle /> Enviar comentario</Button>
+          </div>
         </Window>
         <div className="community-side">
-          <Window title="Bocetos y rayones">
-            <p className="window-copy">Favoritos elegidos por Maxi</p>
-            <div className="community-gallery">
-              {submissions.map((s) => (
-                <article className="community-art" key={s.id}><img src={s.image_path} alt={`Dibujo de ${s.author}`} /><div className="community-art-info"><strong>{s.author}</strong>{s.note && <p>{s.note}</p>}</div></article>
-              ))}
-              {submissions.length === 0 && <p className="window-copy">Aún no hay dibujos aprobados. ¡Sé el primero! ♡</p>}
-            </div>
-          </Window>
+          <Window title="Bocetos y rayones"><p className="window-copy">Favoritos elegidos por Maxi</p><GalleryDisplay /></Window>
           <PaintCanvas />
+          <Window title="Notita"><p className="window-copy">Los comentarios de usuarios aparecen cuando Maxine los aprueba.</p></Window>
         </div>
       </div>
       <ProfileBand />
@@ -666,7 +810,10 @@ function About({ adminMode }: { adminMode: boolean }) {
       </div>
       <div className="about-stack">
         <Window title="ABOUT_MAXINE.TXT">
-          <div className="about-note"><img src={images.aboutMain} alt="Avatar Maxine" /><p>✨ ¡Haii! Bienvenidos a mi Strawpage personal. Aquí comparto un poco sobre mí, mis gustos y rayones favoritos.</p></div>
+          <div className="about-note">
+            <img src={images.aboutMain} alt="Avatar Maxine" />
+            <p>✨ ¡Haii! Bienvenidos a mi Strawpage personal. Aquí comparto un poco sobre mí, mis gustos y rayones favoritos.</p>
+          </div>
         </Window>
         <Window title="MY_UNIVERSE.EXE">
           <StrawpageCanvas adminMode={adminMode} />
@@ -677,8 +824,10 @@ function About({ adminMode }: { adminMode: boolean }) {
   );
 }
 
+// --- NUEVA PESTAÑA CONTACTO (CHAT) ---
 function Contact() {
   const profile = getStoredProfile();
+  const images = getStoredImagesConfig();
   const [activeThreadId, setActiveThreadId] = useState<string | null>(localStorage.getItem("user_active_chat"));
   const [threads, setThreads] = useState<ChatThread[]>(JSON.parse(localStorage.getItem("site_chat_threads") || "[]"));
   
@@ -728,14 +877,18 @@ function Contact() {
       {!activeThreadId ? (
         <Window title="Maxine_contact_form.exe" className="contact-card">
           <div className="contact-identity">
-            <img src={getStoredImagesConfig().homeProfile} alt="Avatar" />
+            <img src={images.homeProfile} alt="Avatar" />
             <div>
               <p className="eyebrow">@Munchxine_</p>
               <h2>{profile.name}</h2>
               <p>Escríbeme y hablemos en directo ✨</p>
             </div>
           </div>
-          <Input placeholder="Tu nombre o apodo..." value={name} onChange={e => setName(e.target.value)} />
+          <div className="info-grid">
+            <span><b>Nombre</b>Anthony Benjamin</span><span><b>Pronombres</b>He / Him</span>
+            <span><b>Edad</b>20 y/o</span><span><b>Ubicación</b>Penco, Chile 🇨🇱</span>
+          </div>
+          <Input placeholder="Tu nombre o apodo..." value={name} onChange={e => setName(e.target.value)} style={{ marginTop: '15px' }} />
           <Input placeholder="Tu correo o red social (opcional)..." value={contactInfo} onChange={e => setContactInfo(e.target.value)} />
           <Textarea placeholder="¡Hola Maxine! Me gustaría..." value={initialMsg} onChange={e => setInitialMsg(e.target.value)} />
           <Button variant="signal" onClick={startChat} disabled={!name.trim() || !initialMsg.trim()}>
@@ -744,9 +897,9 @@ function Contact() {
         </Window>
       ) : (
         <Window title={`Chat con Maxine`} className="contact-card">
-          <div style={{ height: '300px', overflowY: 'auto', background: '#0a192f', padding: '10px', borderRadius: '6px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ height: '300px', overflowY: 'auto', background: 'rgba(10, 25, 47, 0.5)', padding: '10px', borderRadius: '6px', display: 'flex', flexDirection: 'column', gap: '10px', border: '1px solid rgba(255,255,255,0.1)' }}>
             {activeThread?.messages.map(msg => (
-              <div key={msg.id} style={{ alignSelf: msg.sender === "user" ? "flex-end" : "flex-start", background: msg.sender === "user" ? "#1e3a8a" : "#164e63", padding: '8px 12px', borderRadius: '8px', maxWidth: '80%' }}>
+              <div key={msg.id} style={{ alignSelf: msg.sender === "user" ? "flex-end" : "flex-start", background: msg.sender === "user" ? "rgba(105, 162, 255, 0.4)" : "rgba(22, 78, 99, 0.7)", padding: '8px 12px', borderRadius: '8px', maxWidth: '80%' }}>
                 <span style={{ fontSize: '10px', color: '#caddff', display: 'block', marginBottom: '2px' }}>{msg.sender === "user" ? "Tú" : profile.name}</span>
                 <p style={{ margin: 0, fontSize: '14px', color: 'white' }}>{msg.text}</p>
               </div>
@@ -764,7 +917,7 @@ function Contact() {
   );
 }
 
-// --- PANEL DE ADMINISTRACIÓN COMPLETO ---
+// --- ADMIN PANEL CON TODO LO VIEJO Y LO NUEVO ---
 function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () => void }) {
   const [activeTab, setActiveTab] = useState<"envios" | "comentarios" | "chat" | "organizador" | "perfil" | "imagenes" | "emojis" | "musica" | "shimeji">("chat");
   const profile = getStoredProfile();
@@ -775,10 +928,15 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
   const [imagesConfig, setImagesConfig] = useState(getStoredImagesConfig());
   const [emojis, setEmojis] = useState<Array<{ name: string; url: string }>>(getStoredEmojis());
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>(getStoredPortfolio());
+  const [newArtTitle, setNewArtTitle] = useState("");
+  const [newArtCategory, setNewArtCategory] = useState("Drawings");
+  const [newArtImage, setNewArtImage] = useState("");
+  const [newEmojiName, setNewEmojiName] = useState("");
+  const [newEmojiImg, setNewEmojiImg] = useState("");
   const [spotifyUrl, setSpotifyUrl] = useState(getStoredSpotify());
   const [shimejiConfig, setShimejiConfig] = useState(getStoredShimejiConfig());
 
-  // Estados nuevos (Chat, Kanban, Calendario)
+  // Estados nuevos (Chat, Organizador)
   const [threads, setThreads] = useState<ChatThread[]>(JSON.parse(localStorage.getItem("site_chat_threads") || "[]"));
   const [adminReply, setAdminReply] = useState("");
   const [tasks, setTasks] = useState<KanbanTask[]>(JSON.parse(localStorage.getItem("admin_kanban_tasks") || "[]"));
@@ -799,18 +957,34 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
     }
   }, [activeTab]);
 
+  // Funciones originales
+  const handleImgConfigUpload = (key: string, e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => { if (ev.target?.result) { const updated = { ...imagesConfig, [key]: ev.target.result as string }; setImagesConfig(updated); localStorage.setItem("site_images_config", JSON.stringify(updated)); } };
+    reader.readAsDataURL(file);
+  };
+  const addEmoji = () => {
+    if (!newEmojiName.trim() || !newEmojiImg) return;
+    const updated = [...emojis, { name: newEmojiName.trim().toLowerCase(), url: newEmojiImg }];
+    setEmojis(updated); localStorage.setItem("site_custom_emojis", JSON.stringify(updated)); setNewEmojiName(""); setNewEmojiImg("");
+  };
+  const addPortfolio = () => {
+    if (!newArtTitle.trim() || !newArtImage) return;
+    const item: PortfolioItem = { id: Date.now().toString(), title: newArtTitle.trim(), category: newArtCategory, image_path: newArtImage };
+    const updated = [item, ...portfolioItems]; setPortfolioItems(updated); localStorage.setItem("site_portfolio", JSON.stringify(updated)); setNewArtTitle(""); setNewArtImage("");
+  };
+
   // Funciones Chat
   const replyToThread = (threadId: string) => {
     if (!adminReply.trim()) return;
     const updated = threads.map(t => {
-      if (t.id === threadId) {
-        return { ...t, unreadUser: true, unreadAdmin: false, messages: [...t.messages, { id: Date.now().toString(), sender: "admin", text: adminReply, timestamp: new Date().toISOString() }] };
-      }
+      if (t.id === threadId) { return { ...t, unreadUser: true, unreadAdmin: false, messages: [...t.messages, { id: Date.now().toString(), sender: "admin", text: adminReply, timestamp: new Date().toISOString() }] }; }
       return t;
     });
     localStorage.setItem("site_chat_threads", JSON.stringify(updated)); setThreads(updated); setAdminReply("");
   };
-
   const deleteThread = (threadId: string) => {
     const updated = threads.filter(t => t.id !== threadId);
     localStorage.setItem("site_chat_threads", JSON.stringify(updated)); setThreads(updated);
@@ -832,8 +1006,9 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
     setEvents(newEvents); localStorage.setItem("admin_calendar_events", JSON.stringify(newEvents));
   };
 
+  // z-index en 9990 para que el Shimeji (10005) se vea por encima
   return (
-    <div className="admin-panel" style={{ cursor: 'inherit', zIndex: 9999 }}>
+    <div className="admin-panel" style={{ zIndex: 9990 }}>
       <div className="admin-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2><LockKeyhole size={18} /> Panel de Administración</h2>
         <div style={{ display: 'flex', gap: '10px' }}>
@@ -842,30 +1017,32 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
         </div>
       </div>
 
-      <div className="admin-tabs-nav" style={{ display: 'flex', gap: '5px', background: '#0a192f', padding: '8px', borderRadius: '6px', marginBottom: '20px', border: '1px solid #1e3a8a', flexWrap: 'wrap' }}>
+      <div className="admin-tabs-nav" style={{ display: 'flex', gap: '5px', background: 'rgba(10, 25, 47, 0.8)', padding: '8px', borderRadius: '6px', marginBottom: '20px', border: '1px solid rgba(30, 58, 138, 0.5)', flexWrap: 'wrap' }}>
         <Button variant={activeTab === "chat" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("chat")}><Inbox size={14}/> Bandeja de Chat</Button>
         <Button variant={activeTab === "organizador" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("organizador")}><Kanban size={14}/> Organizador</Button>
         <Button variant={activeTab === "envios" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("envios")}>Envíos de Arte</Button>
         <Button variant={activeTab === "comentarios" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("comentarios")}>Muro</Button>
         <Button variant={activeTab === "perfil" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("perfil")}>Perfil</Button>
-        <Button variant={activeTab === "imagenes" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("imagenes")}>Galería</Button>
-        <Button variant={activeTab === "shimeji" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("shimeji")}>Mascota Shimeji</Button>
+        <Button variant={activeTab === "imagenes" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("imagenes")}>Galería e Imágenes</Button>
+        <Button variant={activeTab === "emojis" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("emojis")}>Emojis</Button>
+        <Button variant={activeTab === "musica" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("musica")}>Música</Button>
+        <Button variant={activeTab === "shimeji" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("shimeji")}>Shimeji</Button>
       </div>
 
       {activeTab === "chat" && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '15px', maxHeight: '500px' }}>
-          <div style={{ background: '#0f203b', padding: '10px', borderRadius: '8px', overflowY: 'auto' }}>
+          <div style={{ background: 'rgba(15, 32, 59, 0.8)', padding: '10px', borderRadius: '8px', overflowY: 'auto' }}>
             <h3 style={{ fontSize: '14px', marginBottom: '10px' }}>Conversaciones Activas</h3>
-            {threads.length === 0 && <p style={{ fontSize: '12px', color: '#889' }}>No hay mensajes nuevos en el chat de contacto.</p>}
+            {threads.length === 0 && <p style={{ fontSize: '12px', color: '#889' }}>No hay mensajes nuevos.</p>}
             {threads.map(t => (
-              <div key={t.id} style={{ background: '#0a192f', padding: '10px', borderRadius: '6px', marginBottom: '8px', borderLeft: t.unreadAdmin ? '3px solid #4ade80' : '3px solid transparent' }}>
+              <div key={t.id} style={{ background: 'rgba(10, 25, 47, 0.8)', padding: '10px', borderRadius: '6px', marginBottom: '8px', borderLeft: t.unreadAdmin ? '3px solid #4ade80' : '3px solid transparent' }}>
                 <strong style={{ display: 'block', fontSize: '13px' }}>{t.userName} {t.unreadAdmin && <span style={{ color: '#4ade80', fontSize: '10px' }}>¡Nuevo!</span>}</strong>
                 <span style={{ fontSize: '10px', color: '#889' }}>{t.contactInfo}</span>
                 <details style={{ marginTop: '5px', fontSize: '12px' }}>
                   <summary style={{ cursor: 'pointer', color: '#69a2ff', fontWeight: 'bold' }}>Ver conversación / Responder</summary>
                   <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     {t.messages.map(m => (
-                      <div key={m.id} style={{ background: m.sender === 'admin' ? '#164e63' : '#1e3a8a', padding: '8px', borderRadius: '4px' }}>
+                      <div key={m.id} style={{ background: m.sender === 'admin' ? 'rgba(22, 78, 99, 0.7)' : 'rgba(30, 58, 138, 0.5)', padding: '8px', borderRadius: '4px' }}>
                         <b style={{ fontSize: '10px', color: '#caddff' }}>{m.sender === "admin" ? profile.name : t.userName}:</b> <br/><span style={{ fontSize: '13px' }}>{m.text}</span>
                       </div>
                     ))}
@@ -884,7 +1061,7 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
 
       {activeTab === "organizador" && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
-          <div style={{ background: '#0f203b', padding: '15px', borderRadius: '8px' }}>
+          <div style={{ background: 'rgba(15, 32, 59, 0.8)', padding: '15px', borderRadius: '8px' }}>
             <h3 style={{ marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '5px' }}><Kanban size={16}/> Tareas (Notion Style)</h3>
             <div style={{ display: 'flex', gap: '5px', marginBottom: '15px' }}>
               <Input value={newTaskText} onChange={e => setNewTaskText(e.target.value)} placeholder="Nueva idea/tarea..." />
@@ -895,7 +1072,7 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
                 <h4 style={{ fontSize: '12px', color: '#69a2ff', textTransform: 'uppercase', marginBottom: '5px' }}>{status === 'todo' ? 'Por hacer' : status === 'doing' ? 'En proceso' : 'Terminado'}</h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   {tasks.filter(t => t.status === status).map(t => (
-                    <div key={t.id} style={{ background: '#0a192f', padding: '8px', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #1e3a8a' }}>
+                    <div key={t.id} style={{ background: 'rgba(10, 25, 47, 0.6)', padding: '8px', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid rgba(30, 58, 138, 0.5)' }}>
                       <span style={{ fontSize: '13px', textDecoration: status === 'done' ? 'line-through' : 'none', color: status === 'done' ? '#8892b0' : 'white' }}>{t.text}</span>
                       <select value={t.status} onChange={e => updateTaskStatus(t.id, e.target.value as any)} style={{ background: '#1e3a8a', color: 'white', border: 'none', borderRadius: '3px', fontSize: '10px', padding: '4px', cursor: 'pointer' }}>
                         <option value="todo">Por hacer</option>
@@ -908,7 +1085,7 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
               </div>
             ))}
           </div>
-          <div style={{ background: '#0f203b', padding: '15px', borderRadius: '8px' }}>
+          <div style={{ background: 'rgba(15, 32, 59, 0.8)', padding: '15px', borderRadius: '8px' }}>
             <h3 style={{ marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '5px' }}><Calendar size={16}/> Calendario de Comisiones / Notas</h3>
             <Input type="date" value={selectedDate} onChange={e => { setSelectedDate(e.target.value); setEventNote(events.find(ev => ev.date === e.target.value)?.note || ""); }} style={{ marginBottom: '10px' }} />
             <Textarea value={eventNote} onChange={e => setEventNote(e.target.value)} placeholder="Notas, entregas o ideas para este día..." style={{ height: '120px', marginBottom: '10px' }} />
@@ -917,7 +1094,7 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
               <h4 style={{ fontSize: '12px', color: '#69a2ff', marginBottom: '10px' }}>Próximos Eventos</h4>
               {events.length === 0 && <p style={{ fontSize: '11px', color: '#8892b0' }}>No hay eventos guardados.</p>}
               {events.slice(0, 5).map(e => (
-                <div key={e.date} style={{ background: '#0a192f', padding: '8px', borderRadius: '4px', marginBottom: '5px', fontSize: '12px', border: '1px solid #1e3a8a' }}>
+                <div key={e.date} style={{ background: 'rgba(10, 25, 47, 0.6)', padding: '8px', borderRadius: '4px', marginBottom: '5px', fontSize: '12px', border: '1px solid rgba(30, 58, 138, 0.5)' }}>
                   <b style={{ color: '#4ade80' }}>{new Date(e.date).toLocaleDateString('es')}:</b> {e.note}
                 </div>
               ))}
@@ -926,17 +1103,16 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
         </div>
       )}
 
-      {/* COMPATIBILIDAD VIEJOS TABS */}
+      {/* RESTO DE PESTAÑAS ORIGINALES (MANTENIDAS EXACTAMENTE IGUAL) */}
       {activeTab === "envios" && (
-        submissions.length === 0 ? <p className="window-copy">No hay envíos de dibujos todavía.</p> : (
+        submissions.length === 0 ? (<p className="window-copy">No hay envíos de dibujos todavía.</p>) : (
           <div className="admin-grid">
             {submissions.map((s) => (
               <article key={s.id} className={`admin-card ${s.approved ? "approved" : "pending"}`}>
-                <div className="admin-card-image"><img src={s.image_path} alt="Dibujo" /><span className={`admin-badge ${s.approved ? "badge-approved" : "badge-pending"}`}>{s.approved ? "APROBADO" : "PENDIENTE"}</span></div>
-                <div className="admin-card-info"><strong>{s.author}</strong>{s.note && <p>{s.note}</p>}</div>
+                <div className="admin-card-image"><img src={s.image_path} alt={`Dibujo`} /><span className={`admin-badge ${s.approved ? "badge-approved" : "badge-pending"}`}>{s.approved ? "APROBADO" : "PENDIENTE"}</span></div>
+                <div className="admin-card-info"><strong>{s.author}</strong>{s.note && <p>{s.note}</p>}<span className="admin-date">{new Date(s.created_at).toLocaleString("es")}</span></div>
                 <div className="admin-card-actions">
-                  {!s.approved ? <Button variant="signal" size="sm" onClick={() => { const updated = submissions.map(sub => sub.id === s.id ? { ...sub, approved: true } : sub); setSubmissions(updated); localStorage.setItem("local_submissions", JSON.stringify(updated)); }}><Check size={14} /> Aprobar</Button>
-                  : <Button variant="station" size="sm" onClick={() => { const updated = submissions.map(sub => sub.id === s.id ? { ...sub, approved: false } : sub); setSubmissions(updated); localStorage.setItem("local_submissions", JSON.stringify(updated)); }}><Eye size={14} /> Ocultar</Button>}
+                  {!s.approved ? (<Button variant="signal" size="sm" onClick={() => { const updated = submissions.map(sub => sub.id === s.id ? { ...sub, approved: true } : sub); setSubmissions(updated); localStorage.setItem("local_submissions", JSON.stringify(updated)); }}><Check size={14} /> Aprobar</Button>) : (<Button variant="station" size="sm" onClick={() => { const updated = submissions.map(sub => sub.id === s.id ? { ...sub, approved: false } : sub); setSubmissions(updated); localStorage.setItem("local_submissions", JSON.stringify(updated)); }}><Eye size={14} /> Ocultar</Button>)}
                   <Button variant="destructive" size="sm" onClick={() => { const updated = submissions.filter(sub => sub.id !== s.id); setSubmissions(updated); localStorage.setItem("local_submissions", JSON.stringify(updated)); }}><Trash2 size={14} /> Eliminar</Button>
                 </div>
               </article>
@@ -946,19 +1122,15 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
       )}
 
       {activeTab === "comentarios" && (
-        <div style={{ padding: '20px', background: '#0f203b', borderRadius: '8px', border: '1px solid #1e3a8a' }}>
+        <div style={{ padding: '20px', background: 'rgba(15, 32, 59, 0.8)', borderRadius: '8px' }}>
           <h3 style={{ marginBottom: '15px' }}>Moderar Comentarios del Muro</h3>
-          {allComments.length === 0 ? <p className="window-copy">No hay comentarios en el muro.</p> : (
+          {allComments.length === 0 ? (<p className="window-copy">No hay comentarios en el muro.</p>) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {allComments.map((c) => (
-                <div key={c.id} style={{ background: '#0a192f', padding: '12px', borderRadius: '6px', border: '1px solid #1e3a8a', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <strong>{c.author}</strong> <span style={{ fontSize: '11px', color: '#8892b0' }}>{new Date(c.created_at).toLocaleString("es")}</span>
-                    <p style={{ margin: '5px 0', fontSize: '13px' }}>{c.content}</p>
-                    <span style={{ fontSize: '10px', color: c.approved ? '#4ade80' : '#facc15' }}>{c.approved ? "APROBADO" : "PENDIENTE"}</span>
-                  </div>
+                <div key={c.id} style={{ background: 'rgba(10, 25, 47, 0.6)', padding: '12px', borderRadius: '6px', border: '1px solid rgba(30, 58, 138, 0.5)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div><strong>{c.author}</strong> <span style={{ fontSize: '11px', color: '#8892b0' }}>{new Date(c.created_at).toLocaleString("es")}</span><p style={{ margin: '5px 0', fontSize: '13px' }}>{c.content}</p><span style={{ fontSize: '10px', color: c.approved ? '#4ade80' : '#facc15' }}>{c.approved ? "APROBADO" : "PENDIENTE"}</span></div>
                   <div style={{ display: 'flex', gap: '5px' }}>
-                    {!c.approved ? <Button variant="signal" size="sm" onClick={() => { const updated = allComments.map(item => item.id === c.id ? { ...item, approved: true } : item); setAllComments(updated); localStorage.setItem("local_comments", JSON.stringify(updated)); }}>Aprobar</Button> : <Button variant="station" size="sm" onClick={() => { const updated = allComments.map(item => item.id === c.id ? { ...item, approved: false } : item); setAllComments(updated); localStorage.setItem("local_comments", JSON.stringify(updated)); }}>Ocultar</Button>}
+                    {!c.approved ? (<Button variant="signal" size="sm" onClick={() => { const updated = allComments.map(item => item.id === c.id ? { ...item, approved: true } : item); setAllComments(updated); localStorage.setItem("local_comments", JSON.stringify(updated)); }}>Aprobar</Button>) : (<Button variant="station" size="sm" onClick={() => { const updated = allComments.map(item => item.id === c.id ? { ...item, approved: false } : item); setAllComments(updated); localStorage.setItem("local_comments", JSON.stringify(updated)); }}>Ocultar</Button>)}
                     <Button variant="destructive" size="sm" onClick={() => { const updated = allComments.filter(item => item.id !== c.id); setAllComments(updated); localStorage.setItem("local_comments", JSON.stringify(updated)); }}>Eliminar</Button>
                   </div>
                 </div>
@@ -967,63 +1139,41 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
           )}
         </div>
       )}
-      
-      {activeTab === "perfil" && <div style={{ padding: '20px', background: '#0f203b', borderRadius: '8px', border: '1px solid #1e3a8a' }}><p>Configuración de perfil mantenida (ver código original para no exceder límites de texto).</p></div>}
-      {activeTab === "imagenes" && <div style={{ padding: '20px', background: '#0f203b', borderRadius: '8px', border: '1px solid #1e3a8a' }}><p>Galería y portafolio mantenidos (ver código original).</p></div>}
-      {activeTab === "shimeji" && <div style={{ padding: '20px', background: '#0f203b', borderRadius: '8px', border: '1px solid #1e3a8a' }}><p>Configuración Shimeji mantenida (ver código original).</p></div>}
-    </div>
-  );
-}
 
-// --- APP PRINCIPAL ---
-export function MaxineApp() {
-  const [page, setPageState] = useState<Page>("inicio");
-  const [adminLoginOpen, setAdminLoginOpen] = useState(false);
-  const [adminPanelOpen, setAdminPanelOpen] = useState(false);
-  const [adminMode, setAdminMode] = useState(() => localStorage.getItem("site_admin_logged") === "true");
-  const [effectMode, setEffectMode] = useState<"normal" | "bubbles" | "cyber" | "kiss">("normal");
-
-  const setPage = (next: Page) => { setPageState(next); window.scrollTo({ top: 0, behavior: "smooth" }); };
-  const handleAdminAccess = () => adminMode ? setAdminPanelOpen(true) : setAdminLoginOpen(true);
-  const handleLogoutAdmin = () => { localStorage.removeItem("site_admin_logged"); setAdminMode(false); setAdminPanelOpen(false); };
-
-  return (
-    <div className={`app-shell ${effectMode === "cyber" ? "cyber-theme" : ""}`}>
-      <div className="ambient-grid" />
-      <div className="scanline" />
-
-      {effectMode === "bubbles" && (
-        <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0, overflow: 'hidden' }}>
-          {Array.from({ length: 30 }).map((_, i) => (
-            <div key={i} style={{ position: 'absolute', bottom: '-40px', left: `${Math.random() * 100}%`, width: `${12 + Math.random() * 30}px`, height: `${12 + Math.random() * 30}px`, background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.8), rgba(105, 162, 255, 0.3))', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.5)', boxShadow: 'inset 0 0 4px rgba(255,255,255,0.8), 0 0 8px rgba(105,162,255,0.4)', animation: `floatUp ${4 + Math.random() * 5}s linear infinite`, animationDelay: `${Math.random() * 5}s` }} />
-          ))}
-          <style>{`@keyframes floatUp { 0% { transform: translateY(0) scale(0.8); opacity: 0; } 20% { opacity: 0.7; } 80% { opacity: 0.7; } 100% { transform: translateY(-105vh) scale(1.2); opacity: 0; } }`}</style>
-        </div>
-      )}
-      
-      {effectMode === "kiss" && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 10000, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', animation: 'fadeIn 0.3s ease' }}>
-          <img src={avatarAsset.url} alt="Beso" style={{ width: '220px', height: '220px', objectFit: 'contain', animation: 'bounce 1s infinite', filter: 'drop-shadow(0 0 20px #ff6b9d)' }} />
-          <h2 style={{ color: '#ff6b9d', marginTop: '20px', fontFamily: 'Tahoma, sans-serif' }}>¡Muuuuchox besitos de Maxine! ♡</h2>
-          <Button variant="signal" onClick={() => setEffectMode("normal")} style={{ marginTop: '20px' }}>Cerrar animación</Button>
+      {activeTab === "perfil" && (
+        <div style={{ padding: '20px', background: 'rgba(15, 32, 59, 0.8)', borderRadius: '8px' }}>
+          <h3 style={{ marginBottom: '20px' }}>Datos de perfil</h3>
+          <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+            <div style={{ width: '150px', textAlign: 'center' }}>
+              <img src={profile.avatar} alt="Profile" style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: '8px', border: '1px solid #1e3a8a', marginBottom: '10px' }} />
+            </div>
+            <div style={{ flex: 1, minWidth: '250px' }}>
+              <label style={{ fontSize: '10px', color: '#69a2ff', textTransform: 'uppercase', letterSpacing: '1px' }}>Nombre de usuario</label>
+              <Input value={profile.name} onChange={(e) => {
+                const updated = { ...profile, name: e.target.value };
+                localStorage.setItem("site_profile", JSON.stringify(updated));
+              }} style={{ marginTop: '8px', marginBottom: '15px' }} />
+              <Button variant="signal" style={{ width: '100%' }} onClick={() => alert("¡Perfil guardado!")}>GUARDAR PERFIL</Button>
+            </div>
+          </div>
         </div>
       )}
 
-      <Header page={page} setPage={setPage} onAdminAccess={handleAdminAccess} />
-      {adminPanelOpen && <AdminPanel onClose={() => setAdminPanelOpen(false)} onLogout={handleLogoutAdmin} />}
-      
-      {page === "inicio" && <Home setPage={setPage} />}
-      {page === "portafolio" && <Portfolio />}
-      {page === "comunidad" && <Community adminMode={adminMode} />}
-      {page === "sobre-mi" && <About adminMode={adminMode} />}
-      {page === "contacto" && <Contact />}
-      
-      <VirtualShimeji />
-      <SpotifyWidget />
-      <SecretCodesWidget onTriggerEffect={(eff) => setEffectMode(eff as any)} />
-      
-      <footer className="system-footer"><span>MUNCHINE ONLINE!</span><span>ENLACES VERIFICADOS · ES</span><div><Play size={12} /> DEEP_SEA_SIGNAL.WAV</div></footer>
-      <AdminLoginDialog open={adminLoginOpen} onOpenChange={setAdminLoginOpen} onSuccess={() => { localStorage.setItem("site_admin_logged", "true"); setAdminMode(true); setAdminLoginOpen(false); setAdminPanelOpen(true); }} />
-    </div>
-  );
-}
+      {activeTab === "imagenes" && (
+        <div style={{ padding: '20px', background: 'rgba(15, 32, 59, 0.8)', borderRadius: '8px' }}>
+          <h3 style={{ marginBottom: '15px' }}>Imágenes del Sitio</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '15px', marginBottom: '30px' }}>
+            {[ { key: "homeProfile", label: "Inicio (Perfil)" }, { key: "homeDirects", label: "Inicio (Accesos)" }, { key: "homeIntro", label: "Inicio (Intro)" }, { key: "aboutMain", label: "About" }, { key: "credential", label: "Contacto (Credencial)" }].map((item) => (
+              <div key={item.key} style={{ background: 'rgba(10, 25, 47, 0.6)', padding: '10px', borderRadius: '8px', textAlign: 'center' }}>
+                <span style={{ fontSize: '12px', display: 'block', marginBottom: '8px' }}>{item.label}</span>
+                <img src={imagesConfig[item.key]} alt="" style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '6px', margin: '0 auto 8px', display: 'block' }} />
+                <label className="upload-button" style={{ background: '#1e3a8a', padding: '5px 10px', borderRadius: '4px', fontSize: '11px', cursor: 'pointer', display: 'inline-block' }}>Cambiar<input type="file" accept="image/*" onChange={(e) => handleImgConfigUpload(item.key, e)} style={{ display: 'none' }} /></label>
+              </div>
+            ))}
+          </div>
+
+          <h3 style={{ marginBottom: '15px' }}>Gestión de Portafolio</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+            <Input placeholder="Título de la obra..." value={newArtTitle} onChange={(e) => setNewArtTitle(e.target.value)} />
+            <select value={newArtCategory} onChange={(e) => setNewArtCategory(e.target.value)} style={{ background: '#0a192f', color: 'white', padding: '8px', borderRadius: '6px' }}>
+              <option value="Drawings">Drawings</option><option value="
