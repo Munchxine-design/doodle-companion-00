@@ -80,7 +80,7 @@ export function useProfileSettings() {
     setProfile(next);
     const { error } = await supabase
       .from("site_settings")
-      .upsert({ key: "profile", value: next as unknown as Record<string, unknown>, updated_at: new Date().toISOString() });
+      .upsert({ key: "profile", value: next as unknown as import("@/integrations/supabase/types").Json, updated_at: new Date().toISOString() });
     if (error) throw error;
   }, []);
 
