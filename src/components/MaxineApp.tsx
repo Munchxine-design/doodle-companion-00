@@ -859,7 +859,7 @@ function Contact() {
     if (!replyMsg.trim() || !activeThread) return;
     const updatedThreads = threads.map(t => {
       if (t.id === activeThread.id) {
-        return { ...t, unreadAdmin: true, messages: [...t.messages, { id: Date.now().toString(), sender: "user", text: replyMsg, timestamp: new Date().toISOString() }] };
+        return { ...t, unreadAdmin: true, messages: [...t.messages, { id: Date.now().toString(), sender: "user" as const, text: replyMsg, timestamp: new Date().toISOString() }] };
       }
       return t;
     });
@@ -942,7 +942,7 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
   const [tasks, setTasks] = useState<KanbanTask[]>(JSON.parse(localStorage.getItem("admin_kanban_tasks") || "[]"));
   const [newTaskText, setNewTaskText] = useState("");
   const [events, setEvents] = useState<CalendarEvent[]>(JSON.parse(localStorage.getItem("admin_calendar_events") || "[]"));
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split("T")[0]);
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split("T")[0] ?? "");
   const [eventNote, setEventNote] = useState("");
 
   useEffect(() => {
@@ -955,6 +955,7 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
       const interval = setInterval(() => setThreads(JSON.parse(localStorage.getItem("site_chat_threads") || "[]")), 2000);
       return () => clearInterval(interval);
     }
+    return undefined;
   }, [activeTab]);
 
   // Funciones originales
@@ -980,7 +981,7 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
   const replyToThread = (threadId: string) => {
     if (!adminReply.trim()) return;
     const updated = threads.map(t => {
-      if (t.id === threadId) { return { ...t, unreadUser: true, unreadAdmin: false, messages: [...t.messages, { id: Date.now().toString(), sender: "admin", text: adminReply, timestamp: new Date().toISOString() }] }; }
+      if (t.id === threadId) { return { ...t, unreadUser: true, unreadAdmin: false, messages: [...t.messages, { id: Date.now().toString(), sender: "admin" as const, text: adminReply, timestamp: new Date().toISOString() }] }; }
       return t;
     });
     localStorage.setItem("site_chat_threads", JSON.stringify(updated)); setThreads(updated); setAdminReply("");
