@@ -157,3 +157,27 @@ button { color: inherit; }
 * {
   cursor: none !important;
 }
+
+/* 1. FONDO CON OVERLAY OSCURO */
+.app-shell {
+  /* El rgba() oscuro hace de filtro para que el GIF no lastime la vista */
+  background: linear-gradient(rgba(10, 15, 30, 0.75), rgba(10, 15, 30, 0.75)), url('/bg.gif') center/cover fixed !important;
+}
+
+/* 2. EFECTO LIQUID GLASS PARA LAS VENTANAS */
+.station-window {
+  background: rgba(20, 35, 65, 0.45) !important; /* Color base más claro y transparente */
+  backdrop-filter: blur(16px) !important; /* Desenfoque que crea el efecto cristal */
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(105, 162, 255, 0.25) !important; /* Borde de cristal iluminado */
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4) !important; /* Sombra suave */
+}
+
+/* 3. LIQUID GLASS PARA EL PANEL DE ADMIN */
+.admin-panel {
+  background: rgba(15, 25, 50, 0.5) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(105, 162, 255, 0.3) !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6) !important;
+}
