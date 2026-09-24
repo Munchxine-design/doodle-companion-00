@@ -762,7 +762,7 @@ function Community({ adminMode }: { adminMode: boolean }) {
       <div className="community-grid">
         <Window title="Muro de Maxine" className="wall">
           <article className="post">
-            <div className="post-author"><img src={images.homeProfile} alt="Maxine" /><div><strong>{profile.name} <small>ADMIN / DEV :3C</small></strong><span>14 sept 2026, 0:24</span></div></div>
+            <div className="post-author"><img src={images.homeProfile} alt="Maxine" /><div><strong>Maxine MoonLight "Munchxine" <small>ADMIN / DEV :3C</small></strong><span>14 sept 2026, 0:24</span></div></div>
             <p>¡Haii! Bienvenidos al muro oficial de la web.</p>
           </article>
           {loading && <p className="window-copy">Cargando comentarios...</p>}
@@ -885,8 +885,8 @@ function Contact() {
             </div>
           </div>
           <div className="info-grid">
-            <span><b>Nombre</b>Anthony Benjamin</span><span><b>Pronombres</b>He / Him</span>
-            <span><b>Edad</b>20 y/o</span><span><b>Ubicación</b>Penco, Chile 🇨🇱</span>
+            <span><b>Nombre</b>{"Maxine\nMoonlight"}</span><span><b>Pronombres</b>He / Him</span>
+            <span><b>Edad</b>{"19\ny/o"}</span><span><b>Ubicación</b>{"Chile"}</span>
           </div>
           <Input placeholder="Tu nombre o apodo..." value={name} onChange={e => setName(e.target.value)} style={{ marginTop: '15px' }} />
           <Input placeholder="Tu correo o red social (opcional)..." value={contactInfo} onChange={e => setContactInfo(e.target.value)} />
