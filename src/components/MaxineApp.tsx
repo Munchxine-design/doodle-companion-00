@@ -1176,4 +1176,128 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
             <Input placeholder="Título de la obra..." value={newArtTitle} onChange={(e) => setNewArtTitle(e.target.value)} />
             <select value={newArtCategory} onChange={(e) => setNewArtCategory(e.target.value)} style={{ background: '#0a192f', color: 'white', padding: '8px', borderRadius: '6px' }}>
-              <option value="Drawings">Drawings</option><option value="
+              <option value="Drawings">Drawings</option><option value="Doodles">Doodles</option><option value="Renders">Renders</option>
+            </select>
+            <label className="upload-button" style={{ background: '#1e3a8a', padding: '8px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', display: 'inline-block' }}>
+              {newArtImage ? "Imagen lista ✓" : "Elegir imagen"}
+              <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (!f) return; const r = new FileReader(); r.onload = (ev) => setNewArtImage(String(ev.target?.result ?? "")); r.readAsDataURL(f); }} />
+            </label>
+            <Button variant="signal" onClick={addPortfolio}><Plus size={14} /> Agregar obra</Button>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px' }}>
+            {portfolioItems.map((p) => (
+              <div key={p.id} style={{ background: 'rgba(10, 25, 47, 0.6)', padding: '8px', borderRadius: '6px', textAlign: 'center' }}>
+                <img src={p.image_path} alt={p.title} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: '4px' }} />
+                <p style={{ fontSize: '12px', margin: '6px 0' }}>{p.title} · {p.category}</p>
+                <Button variant="destructive" size="sm" onClick={() => { const updated = portfolioItems.filter(i => i.id !== p.id); setPortfolioItems(updated); localStorage.setItem("site_portfolio", JSON.stringify(updated)); }}><Trash2 size={12} /></Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {activeTab === "emojis" && (
+        <div style={{ padding: '20px', background: 'rgba(15, 32, 59, 0.8)', borderRadius: '8px' }}>
+          <h3 style={{ marginBottom: '15px' }}>Emojis personalizados</h3>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '20px' }}>
+            <Input placeholder="nombre" value={newEmojiName} onChange={(e) => setNewEmojiName(e.target.value)} style={{ maxWidth: '200px' }} />
+            <label className="upload-button" style={{ background: '#1e3a8a', padding: '8px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}>
+              {newEmojiImg ? "Imagen lista ✓" : "Elegir imagen"}
+              <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (!f) return; const r = new FileReader(); r.onload = (ev) => setNewEmojiImg(String(ev.target?.result ?? "")); r.readAsDataURL(f); }} />
+            </label>
+            <Button variant="signal" onClick={addEmoji}><Plus size={14} /> Agregar</Button>
+          </div>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            {emojis.map((em, i) => (
+              <div key={`${em.name}-${i}`} style={{ textAlign: 'center', background: 'rgba(10, 25, 47, 0.6)', padding: '8px', borderRadius: '6px' }}>
+                <img src={em.url} alt={em.name} style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
+                <p style={{ fontSize: '11px', margin: '4px 0' }}>:{em.name}:</p>
+                <Button variant="destructive" size="sm" onClick={() => { const updated = emojis.filter((_, idx) => idx !== i); setEmojis(updated); localStorage.setItem("site_custom_emojis", JSON.stringify(updated)); }}><Trash2 size={12} /></Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {activeTab === "musica" && (
+        <div style={{ padding: '20px', background: 'rgba(15, 32, 59, 0.8)', borderRadius: '8px' }}>
+          <h3 style={{ marginBottom: '15px' }}>Música (enlace de Spotify)</h3>
+          <Input placeholder="https://open.spotify.com/..." value={spotifyUrl} onChange={(e) => setSpotifyUrl(e.target.value)} style={{ marginBottom: '10px' }} />
+          <Button variant="signal" onClick={() => { localStorage.setItem("site_spotify_url", spotifyUrl.trim()); alert("¡Música guardada!"); }}>Guardar</Button>
+        </div>
+      )}
+
+      {activeTab === "shimeji" && (
+        <div style={{ padding: '20px', background: 'rgba(15, 32, 59, 0.8)', borderRadius: '8px' }}>
+          <h3 style={{ marginBottom: '15px' }}>Imágenes del Shimeji</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px' }}>
+            {Object.keys(shimejiConfig).map((state) => (
+              <div key={state} style={{ background: 'rgba(10, 25, 47, 0.6)', padding: '8px', borderRadius: '6px', textAlign: 'center' }}>
+                <span style={{ fontSize: '12px', display: 'block', marginBottom: '6px' }}>{state}</span>
+                <img src={(shimejiConfig as Record<string, string[]>)[state]?.[0] ?? avatarAsset.url} alt={state} style={{ width: '60px', height: '60px', objectFit: 'contain', margin: '0 auto 6px', display: 'block' }} />
+                <label className="upload-button" style={{ background: '#1e3a8a', padding: '5px 10px', borderRadius: '4px', fontSize: '11px', cursor: 'pointer', display: 'inline-block' }}>
+                  Cambiar
+                  <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (!f) return; const r = new FileReader(); r.onload = (ev) => { const updated = { ...shimejiConfig, [state]: [String(ev.target?.result ?? "")] }; setShimejiConfig(updated); localStorage.setItem("site_shimeji_states", JSON.stringify(updated)); }; r.readAsDataURL(f); }} />
+                </label>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ProfileBand() {
+  const images = getStoredImagesConfig();
+  return (
+    <section className="profile-band">
+      <Window title="Munchxine_profile.exe">
+        <div className="intro-copy">
+          <img src={images.homeProfile} alt="Perfil de Maxine" />
+          <div>
+            <p className="eyebrow">HIYAAA!!</p>
+            <h2>Maxine / Munchy / Moopy</h2>
+            <p>Artista chileno de 19 años • Arte 2D y 3D • ESP / ENG</p>
+          </div>
+        </div>
+      </Window>
+    </section>
+  );
+}
+
+export function MaxineApp() {
+  const [page, setPage] = useState<Page>("inicio");
+  const [mounted, setMounted] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [adminMode, setAdminMode] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [effect, setEffect] = useState<string | null>(null);
+
+  useEffect(() => { setMounted(true); setAdminMode(sessionStorage.getItem("maxine_admin") === "1"); }, []);
+  useEffect(() => { window.scrollTo({ top: 0 }); }, [page]);
+  useEffect(() => { if (!effect) return; const t = setTimeout(() => setEffect(null), 4000); return () => clearTimeout(t); }, [effect]);
+
+  if (!mounted) return <div className="station-app" />;
+
+  const openAdmin = () => { if (adminMode) setPanelOpen(true); else setLoginOpen(true); };
+
+  return (
+    <div className={`station-app ${effect ? `effect-${effect}` : ""}`}>
+      <Header page={page} setPage={setPage} onAdminAccess={openAdmin} />
+      {page === "inicio" && <Home setPage={setPage} />}
+      {page === "portafolio" && <Portfolio />}
+      {page === "comunidad" && <Community adminMode={adminMode} />}
+      {page === "sobre-mi" && <About adminMode={adminMode} />}
+      {page === "contacto" && <Contact />}
+      <SecretCodesWidget onTriggerEffect={setEffect} />
+      <SpotifyWidget />
+      <VirtualShimeji />
+      <AdminLoginDialog open={loginOpen} onOpenChange={setLoginOpen} onSuccess={() => { setAdminMode(true); sessionStorage.setItem("maxine_admin", "1"); setLoginOpen(false); setPanelOpen(true); }} />
+      {panelOpen && adminMode && (
+        <AdminPanel onClose={() => setPanelOpen(false)} onLogout={() => { setAdminMode(false); setPanelOpen(false); sessionStorage.removeItem("maxine_admin"); }} />
+      )}
+      <footer className="system-footer"><span>MUNCHINE ONLINE!</span></footer>
+    </div>
+  );
+}
