@@ -48,12 +48,12 @@ function readLayers(): UniverseLayer[] {
     if (stored) return JSON.parse(stored) as UniverseLayer[];
     const legacy = JSON.parse(localStorage.getItem(LEGACY_KEY) || "[]") as Array<Record<string, unknown>>;
     return legacy.map((item, index) => ({
-      id: String(item.id ?? `legacy-${index}`),
-      name: item.type === "text" ? `Texto ${index + 1}` : `Imagen ${index + 1}`,
-      type: item.type === "text" ? "text" : "image",
-      content: String(item.content ?? ""),
-      x: Number(item.x ?? 50), y: Number(item.y ?? 50), width: Number(item.width ?? 180), height: Number(item.height ?? 120),
-      z: Number(item.z ?? index + 1), locked: false, visible: true, opacity: 1,
+      id: String(item['id'] ?? `legacy-${index}`),
+      name: item['type'] === "text" ? `Texto ${index + 1}` : `Imagen ${index + 1}`,
+      type: item['type'] === "text" ? "text" : "image",
+      content: String(item['content'] ?? ""),
+      x: Number(item['x'] ?? 50), y: Number(item['y'] ?? 50), width: Number(item['width'] ?? 180), height: Number(item['height'] ?? 120),
+      z: Number(item['z'] ?? index + 1), locked: false, visible: true, opacity: 1,
       fontFamily: "Manrope", fontSize: 20, fontWeight: "normal", fontStyle: "normal", textAlign: "left", color: "#dbeafe",
       imageScale: 1, imageX: 50, imageY: 50,
     }));
