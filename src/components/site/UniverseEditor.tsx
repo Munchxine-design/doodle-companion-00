@@ -151,7 +151,7 @@ export function UniverseEditor({ adminMode }: { adminMode: boolean }) {
   const addText = () => {
     const id = crypto.randomUUID();
     const z = Math.max(0, ...layers.map((layer) => layer.z)) + 1;
-    commit([...layers, { id, name: "Texto nuevo", type: "text", content: "Escribe algo bonito...", x: 90, y: 80, width: 320, height: 100, z, locked: false, visible: true, opacity: 1, fontFamily: "Sora", fontSize: 28, fontWeight: "bold", fontStyle: "normal", textAlign: "left", color: "#dbeafe" }]);
+    commit([...layers, { id, name: "Texto nuevo", type: "text", content: "Escribe algo bonito...", x: 90, y: 80, width: 320, height: 140, z, locked: false, visible: true, opacity: 1, fontFamily: "Sora", fontSize: 28, fontWeight: "bold", fontStyle: "normal", textAlign: "left", color: "#dbeafe" }]);
     setSelectedId(id); setTool("select");
   };
 
@@ -261,7 +261,7 @@ export function UniverseEditor({ adminMode }: { adminMode: boolean }) {
             <div className="universe-grid" />
             {[...layers].sort((a, b) => a.z - b.z).filter((layer) => layer.visible).map((layer) => (
               <div key={layer.id} className={`universe-layer ${selectedId === layer.id && adminMode ? "selected" : ""} ${layer.locked ? "locked" : ""} layer-${layer.type}`} style={{ left: `${layer.x / 10}%`, top: `${layer.y / 6.8}%`, width: `${layer.width / 10}%`, height: `${layer.height / 6.8}%`, zIndex: layer.z, opacity: layer.opacity }} onPointerDown={(event) => pointerDown(event, layer, "move")}>
-                {layer.type === "text" && <div className="universe-text" style={{ fontFamily: layer.fontFamily, fontSize: `${layer.fontSize}px`, fontWeight: layer.fontWeight, fontStyle: layer.fontStyle, textAlign: layer.textAlign, color: layer.color }}>{layer.content}</div>}
+                {layer.type === "text" && <div className="universe-text" style={{ fontFamily: layer.fontFamily, fontSize: `${(layer.fontSize ?? 20) / 10}cqw`, fontWeight: layer.fontWeight, fontStyle: layer.fontStyle, textAlign: layer.textAlign, color: layer.color }}>{layer.content}</div>}
                 {layer.type === "image" && <div className="universe-image-viewport"><img src={layer.content} alt={layer.name} draggable={false} style={{ width: `${(layer.imageScale ?? 1) * 100}%`, height: `${(layer.imageScale ?? 1) * 100}%`, objectPosition: `${layer.imageX ?? 50}% ${layer.imageY ?? 50}%` }} /></div>}
                 {layer.type === "drawing" && <DrawingLayer layer={layer} active={adminMode && selectedId === layer.id} tool={tool} color={brushColor} size={brushSize} onCommit={(content) => update(layer.id, { content })} />}
                 {adminMode && selectedId === layer.id && tool === "select" && !layer.locked && layer.type !== "drawing" && <div className="universe-resize" onPointerDown={(event) => pointerDown(event, layer, "resize")}><Maximize2 size={13} /></div>}
@@ -298,6 +298,7 @@ export function UniverseEditor({ adminMode }: { adminMode: boolean }) {
               <label>Posición horizontal <input type="range" min="0" max="100" value={selected.imageX ?? 50} onChange={(event) => update(selected.id, { imageX: Number(event.target.value) })} /></label>
               <label>Posición vertical <input type="range" min="0" max="100" value={selected.imageY ?? 50} onChange={(event) => update(selected.id, { imageY: Number(event.target.value) })} /></label>
             </>}
+            {selected.type === "drawing" && <Button variant="destructive" size="sm" className="universe-clear-layer" onClick={() => update(selected.id, { content: "" })}><Eraser size={14} /> Limpiar capa</Button>}
             <div className="universe-order-controls"><Button variant="station" size="icon" onClick={() => reorder("front")} title="Al frente"><ChevronUp size={16} /></Button><Button variant="station" size="icon" onClick={() => reorder("up")} title="Subir una capa"><Plus size={14} /></Button><Button variant="station" size="icon" onClick={() => reorder("down")} title="Bajar una capa"><ChevronDown size={16} /></Button><Button variant="station" size="sm" onClick={() => reorder("back")} title="Al fondo">Fondo</Button></div>
             <div className="universe-order-controls"><Button variant="station" size="sm" onClick={() => update(selected.id, { locked: !selected.locked })}>{selected.locked ? <Unlock size={14} /> : <Lock size={14} />}{selected.locked ? "Desbloquear" : "Bloquear"}</Button><Button variant="station" size="icon" onClick={duplicate} title="Duplicar"><Copy size={14} /></Button><Button variant="destructive" size="icon" onClick={remove} title="Eliminar"><Trash2 size={14} /></Button></div>
           </div>}
