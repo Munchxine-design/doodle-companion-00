@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { UniverseEditor } from "@/components/site/UniverseEditor";
 
 type Page = "inicio" | "portafolio" | "comunidad" | "sobre-mi" | "contacto";
 
@@ -816,7 +817,7 @@ function About({ adminMode }: { adminMode: boolean }) {
           </div>
         </Window>
         <Window title="MY_UNIVERSE.EXE">
-          <StrawpageCanvas adminMode={adminMode} />
+          <UniverseEditor adminMode={adminMode} />
         </Window>
       </div>
       <ProfileBand />
