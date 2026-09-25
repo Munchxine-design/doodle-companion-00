@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ChangeEvent, type PointerEvent as ReactPointerEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type ChangeEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { AlignCenter, AlignLeft, AlignRight, Brush, ChevronDown, ChevronUp, Copy, Crop, Eraser, Eye, EyeOff, Image as ImageIcon, Layers3, Lock, Maximize2, MousePointer2, Pencil, Plus, Redo2, Trash2, Type, Undo2, Unlock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -198,8 +198,14 @@ export function UniverseEditor({ adminMode }: { adminMode: boolean }) {
     const index = ordered.findIndex((layer) => layer.id === selected.id);
     if (direction === "front") ordered.push(...ordered.splice(index, 1));
     if (direction === "back") ordered.unshift(...ordered.splice(index, 1));
-    if (direction === "up" && index < ordered.length - 1) [ordered[index], ordered[index + 1]] = [ordered[index + 1] as UniverseLayer, ordered[index] as UniverseLayer];
-    if (direction === "down" && index > 0) [ordered[index], ordered[index - 1]] = [ordered[index - 1] as UniverseLayer, ordered[index] as UniverseLayer];
+    if (direction === "up" && index < ordered.length - 1) {
+      const current = ordered[index]; const next = ordered[index + 1];
+      if (current && next) { ordered[index] = next; ordered[index + 1] = current; }
+    }
+    if (direction === "down" && index > 0) {
+      const current = ordered[index]; const previous = ordered[index - 1];
+      if (current && previous) { ordered[index] = previous; ordered[index - 1] = current; }
+    }
     commit(ordered.map((layer, position) => ({ ...layer, z: position + 1 })));
   };
 
@@ -235,7 +241,7 @@ export function UniverseEditor({ adminMode }: { adminMode: boolean }) {
   };
   const pointerUp = () => { if (!drag) return; setDrag(null); localStorage.setItem(STORAGE_KEY, JSON.stringify(layers)); };
 
-  const toolButton = (value: Tool, label: string, icon: React.ReactNode) => <Button variant={tool === value ? "signal" : "station"} size="sm" onClick={() => setTool(value)} title={label}>{icon}<span>{label}</span></Button>;
+  const toolButton = (value: Tool, label: string, icon: ReactNode) => <Button variant={tool === value ? "signal" : "station"} size="sm" onClick={() => setTool(value)} title={label}>{icon}<span>{label}</span></Button>;
 
   return (
     <div className={`universe-editor ${adminMode ? "is-editing" : "is-viewing"}`}>

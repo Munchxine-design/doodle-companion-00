@@ -24,7 +24,7 @@ export function CustomCursor() {
         top: `${position.y}px`,
         left: `${position.x}px`,
         pointerEvents: 'none',
-        zIndex: 9999,
+        zIndex: 30000,
         width: '50px', /* Ajusta este valor si lo quieres más grande o pequeño */
         transform: 'translate(-2px, -2px)', /* Ajuste para que la punta de la flecha encaje con el clic */
       }}
