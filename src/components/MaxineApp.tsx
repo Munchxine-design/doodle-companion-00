@@ -43,23 +43,33 @@ const colorPresets = [
   { name: "Cian", value: "#22d3ee" }, { name: "Blanco", value: "#ffffff" }, { name: "Negro", value: "#1a1a2e" },
 ];
 
-const getStoredProfile = () => JSON.parse(localStorage.getItem("site_profile") || JSON.stringify({ name: "Maxine", avatar: avatarAsset.url }));
+type SiteProfile = { name: string; avatar: string };
+const getStoredProfile = (): SiteProfile => {
+  try {
+    const saved = JSON.parse(localStorage.getItem("site_profile") || "null") as Partial<SiteProfile> | null;
+    return { name: saved?.name || "Maxine", avatar: saved?.avatar || avatarAsset.url };
+  } catch { return { name: "Maxine", avatar: avatarAsset.url }; }
+};
 const getStoredImagesConfig = () => JSON.parse(localStorage.getItem("site_images_config") || JSON.stringify({ homeProfile: avatarAsset.url, homeDirects: avatarAsset.url, homeIntro: avatarAsset.url, aboutMain: avatarAsset.url, credential: orcaAsset.url }));
 const getStoredEmojis = () => JSON.parse(localStorage.getItem("site_custom_emojis") || JSON.stringify([{ name: "corazon", url: avatarAsset.url }, { name: "estrella", url: avatarAsset.url }]));
 const getStoredPortfolio = () => JSON.parse(localStorage.getItem("site_portfolio") || JSON.stringify([{ id: "1", title: "MEGAMAN!!!", category: "Drawings", image_path: avatarAsset.url }]));
 const getStoredSpotify = () => localStorage.getItem("site_spotify_url") || "";
-const getStoredShimejiConfig = () => {
+type ShimejiState = "walk" | "climb" | "fall" | "drag" | "idle" | "click1" | "click2";
+const shimejiStates: ShimejiState[] = ["walk", "climb", "fall", "drag", "idle", "click1", "click2"];
+const shimejiLabels: Record<ShimejiState, string> = { walk: "Caminar", climb: "Trepar", fall: "Caer", drag: "Arrastrar", idle: "Descansar", click1: "Salto 1", click2: "Salto 2" };
+type ShimejiConfig = Record<ShimejiState, string[]>;
+const getStoredShimejiConfig = (): ShimejiConfig => {
   const saved = localStorage.getItem("site_shimeji_states");
-  const def = [avatarAsset.url];
-  if (saved) { try { return JSON.parse(saved); } catch { /* fallback */ } }
-  return { walk: def, climb: def, fall: def, drag: def, idle: def, click1: def, click2: def };
+  let parsed: Record<string, unknown> = {};
+  if (saved) { try { parsed = JSON.parse(saved) as Record<string, unknown>; } catch { /* fallback */ } }
+  return Object.fromEntries(shimejiStates.map(state => [state, Array.isArray(parsed[state]) ? (parsed[state] as unknown[]).filter((frame): frame is string => typeof frame === "string" && frame.length > 0) : [avatarAsset.url]])) as ShimejiConfig;
 };
 
 // --- COMPONENTE SHIMEJI ADAPTADO PARA PC Y MÓVILES TÁCTILES ---
 function VirtualShimeji() {
   const [config, setConfig] = useState(getStoredShimejiConfig);
   const [pos, setPos] = useState({ x: 120, y: window.innerHeight - 90 });
-  const [state, setState] = useState<"walk" | "climb" | "fall" | "drag" | "idle" | "click1" | "click2">("walk");
+  const [state, setState] = useState<ShimejiState>("walk");
   const [direction, setDirection] = useState<1 | -1>(1);
   const [frameIndex, setFrameIndex] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -454,7 +464,7 @@ function TabletExperience({ setPage }: { setPage: (page: Page) => void }) {
 }
 
 function Home({ setPage }: { setPage: (page: Page) => void }) {
-  const profile = getStoredProfile();
+  const [profile, setProfile] = useState<SiteProfile>(getStoredProfile);
   const images = getStoredImagesConfig();
   return <><TabletExperience setPage={setPage} /><section className="intro-band"><Window title="Munchxine.txt"><div className="intro-copy"><img src={images.homeIntro} alt="Avatar de Maxine" /><div><p className="eyebrow">WELCOME_NOTE.LOG</p><h2>¡Haii! Mi nombre es {profile.name}.</h2><p>Soy un artista digital enfocado en el arte 2D, tando ilustracion como modelos Vtuber/Pngtuber. </p></div></div></Window></section><ProfileBand /></>;
 }
@@ -936,6 +946,28 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
   const [newEmojiImg, setNewEmojiImg] = useState("");
   const [spotifyUrl, setSpotifyUrl] = useState(getStoredSpotify());
   const [shimejiConfig, setShimejiConfig] = useState(getStoredShimejiConfig());
+  const [mediaError, setMediaError] = useState("");
+
+  const saveShimeji = (updated: ShimejiConfig) => {
+    try {
+      localStorage.setItem("site_shimeji_states", JSON.stringify(updated));
+      setShimejiConfig(updated);
+      setMediaError("");
+      window.dispatchEvent(new Event("storage"));
+    } catch { setMediaError("No queda espacio en este navegador. Prueba con imágenes más pequeñas."); }
+  };
+
+  const addShimejiFrames = (state: ShimejiState, files: FileList | null) => {
+    if (!files?.length) return;
+    const images = Array.from(files).filter(file => file.type.startsWith("image/"));
+    Promise.all(images.map(file => new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result ?? ""));
+      reader.onerror = () => reject(new Error("read failed"));
+      reader.readAsDataURL(file);
+    }))).then(frames => saveShimeji({ ...shimejiConfig, [state]: [...shimejiConfig[state], ...frames] }))
+      .catch(() => setMediaError("No se pudieron leer las imágenes seleccionadas."));
+  };
 
   // Estados nuevos (Chat, Organizador)
   const [threads, setThreads] = useState<ChatThread[]>(JSON.parse(localStorage.getItem("site_chat_threads") || "[]"));
@@ -1143,21 +1175,32 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
       )}
 
       {activeTab === "perfil" && (
-        <div style={{ padding: '20px', background: 'rgba(15, 32, 59, 0.8)', borderRadius: '8px' }}>
+        <div className="admin-media-section">
           <h3 style={{ marginBottom: '20px' }}>Datos de perfil</h3>
-          <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-            <div style={{ width: '150px', textAlign: 'center' }}>
-              <img src={profile.avatar} alt="Profile" style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: '8px', border: '1px solid #1e3a8a', marginBottom: '10px' }} />
+          <div className="admin-profile-fields">
+            <div className="admin-profile-photo">
+              <img src={profile.avatar} alt="Foto de perfil actual" />
+              <label className="upload-button">Cambiar foto de perfil
+                <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = () => setProfile(current => ({ ...current, avatar: String(reader.result ?? avatarAsset.url) }));
+                  reader.readAsDataURL(file);
+                  e.target.value = "";
+                }} />
+              </label>
             </div>
-            <div style={{ flex: 1, minWidth: '250px' }}>
-              <label style={{ fontSize: '10px', color: '#69a2ff', textTransform: 'uppercase', letterSpacing: '1px' }}>Nombre de usuario</label>
-              <Input value={profile.name} onChange={(e) => {
-                const updated = { ...profile, name: e.target.value };
-                localStorage.setItem("site_profile", JSON.stringify(updated));
-              }} style={{ marginTop: '8px', marginBottom: '15px' }} />
-              <Button variant="signal" style={{ width: '100%' }} onClick={() => alert("¡Perfil guardado!")}>GUARDAR PERFIL</Button>
+            <div className="admin-profile-name">
+              <label htmlFor="admin-profile-name">Nombre de usuario</label>
+              <Input id="admin-profile-name" value={profile.name} onChange={(e) => setProfile(current => ({ ...current, name: e.target.value }))} />
+              <Button variant="signal" onClick={() => {
+                try { localStorage.setItem("site_profile", JSON.stringify({ ...profile, name: profile.name.trim() || "Maxine" })); setMediaError(""); window.dispatchEvent(new Event("storage")); }
+                catch { setMediaError("No queda espacio en este navegador. Prueba con una foto más pequeña."); }
+              }}>Guardar perfil</Button>
             </div>
           </div>
+          {mediaError && <p className="admin-media-error" role="alert">{mediaError}</p>}
         </div>
       )}
 
@@ -1230,18 +1273,28 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
       )}
 
       {activeTab === "shimeji" && (
-        <div style={{ padding: '20px', background: 'rgba(15, 32, 59, 0.8)', borderRadius: '8px' }}>
-          <h3 style={{ marginBottom: '15px' }}>Imágenes del Shimeji</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px' }}>
-            {Object.keys(shimejiConfig).map((state) => (
-              <div key={state} style={{ background: 'rgba(10, 25, 47, 0.6)', padding: '8px', borderRadius: '6px', textAlign: 'center' }}>
-                <span style={{ fontSize: '12px', display: 'block', marginBottom: '6px' }}>{state}</span>
-                <img src={(shimejiConfig as Record<string, string[]>)[state]?.[0] ?? avatarAsset.url} alt={state} style={{ width: '60px', height: '60px', objectFit: 'contain', margin: '0 auto 6px', display: 'block' }} />
-                <label className="upload-button" style={{ background: '#1e3a8a', padding: '5px 10px', borderRadius: '4px', fontSize: '11px', cursor: 'pointer', display: 'inline-block' }}>
-                  Cambiar
-                  <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (!f) return; const r = new FileReader(); r.onload = (ev) => { const updated = { ...shimejiConfig, [state]: [String(ev.target?.result ?? "")] }; setShimejiConfig(updated); localStorage.setItem("site_shimeji_states", JSON.stringify(updated)); }; r.readAsDataURL(f); }} />
+        <div className="admin-media-section">
+          <h3>Fotogramas del Shimeji</h3>
+          {mediaError && <p className="admin-media-error" role="alert">{mediaError}</p>}
+          <div className="shimeji-state-grid">
+            {shimejiStates.map((state) => (
+              <section key={state} className="shimeji-state-card">
+                <h4>{shimejiLabels[state]} <small>{state}</small></h4>
+                <div className="shimeji-frame-list">
+                  {shimejiConfig[state].map((frame, index) => (
+                    <div className="shimeji-frame" key={`${state}-${index}`}>
+                      <span>{index + 1}</span><img src={frame} alt={`Fotograma ${index + 1} de ${shimejiLabels[state]}`} />
+                      <Button variant="ghost" size="icon" title="Mover antes" aria-label={`Mover fotograma ${index + 1} antes`} disabled={index === 0} onClick={() => { const frames = [...shimejiConfig[state]]; [frames[index - 1], frames[index]] = [frames[index] ?? "", frames[index - 1] ?? ""]; saveShimeji({ ...shimejiConfig, [state]: frames }); }}><ChevronDown className="frame-up" size={15} /></Button>
+                      <Button variant="ghost" size="icon" title="Mover después" aria-label={`Mover fotograma ${index + 1} después`} disabled={index === shimejiConfig[state].length - 1} onClick={() => { const frames = [...shimejiConfig[state]]; [frames[index], frames[index + 1]] = [frames[index + 1] ?? "", frames[index] ?? ""]; saveShimeji({ ...shimejiConfig, [state]: frames }); }}><ChevronDown size={15} /></Button>
+                      <Button variant="ghost" size="icon" title="Eliminar fotograma" aria-label={`Eliminar fotograma ${index + 1} de ${shimejiLabels[state]}`} onClick={() => saveShimeji({ ...shimejiConfig, [state]: shimejiConfig[state].filter((_, i) => i !== index) })}><Trash2 size={15} /></Button>
+                    </div>
+                  ))}
+                  {shimejiConfig[state].length === 0 && <p>Sin fotogramas: se muestra la imagen predeterminada.</p>}
+                </div>
+                <label className="upload-button"><Plus size={14} /> Añadir imágenes
+                  <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple onChange={(e) => { addShimejiFrames(state, e.target.files); e.target.value = ""; }} />
                 </label>
-              </div>
+              </section>
             ))}
           </div>
         </div>
@@ -1252,16 +1305,26 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
 
 function ProfileBand() {
   const images = getStoredImagesConfig();
+  const profile = getStoredProfile();
   return (
     <section className="profile-band">
       <Window title="Munchxine_profile.exe">
-        <div className="intro-copy">
-          <img src={images.homeProfile} alt="Perfil de Maxine" />
+        <div className="profile-content">
+          <img src={profile.avatar} alt="Perfil de Maxine" />
           <div>
             <p className="eyebrow">HIYAAA!!</p>
             <h2>Maxine / Munchy / Moopy</h2>
             <p>Artista chileno de 19 años • Arte 2D y 3D • ESP / ENG</p>
+            <div className="tags"><span>Ilustración</span><span>Vtuber / Pngtuber</span><span>Pokemon</span></div>
           </div>
+        </div>
+      </Window>
+      <Window title="status_online.exe">
+        <div className="online-content">
+          <p className="eyebrow">CURRENT_STATUS.LOG</p>
+          <h2>Maxine Online!</h2>
+          <p>@Munchxine_</p>
+          <div className="online-art"><img src={images.homeDirects} alt="Arte de Maxine" /><span>MUNCHINE ONLINE!</span></div>
         </div>
       </Window>
     </section>
@@ -1269,6 +1332,7 @@ function ProfileBand() {
 }
 
 export function MaxineApp() {
+  const [, refreshSite] = useState(0);
   const [page, setPage] = useState<Page>("inicio");
   const [mounted, setMounted] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
@@ -1277,6 +1341,7 @@ export function MaxineApp() {
   const [effect, setEffect] = useState<string | null>(null);
 
   useEffect(() => { setMounted(true); setAdminMode(sessionStorage.getItem("maxine_admin") === "1"); }, []);
+  useEffect(() => { const refresh = () => refreshSite(value => value + 1); window.addEventListener("storage", refresh); return () => window.removeEventListener("storage", refresh); }, []);
   useEffect(() => { window.scrollTo({ top: 0 }); }, [page]);
   useEffect(() => { if (!effect) return; const t = setTimeout(() => setEffect(null), 4000); return () => clearTimeout(t); }, [effect]);
 
