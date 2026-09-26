@@ -276,7 +276,7 @@ function Header({ page, setPage, onAdminAccess }: { page: Page; setPage: (page: 
         <Button variant="ghost" size="icon" className="mobile-menu" onClick={() => setOpen(!open)} aria-label="Abrir menú"><Menu /></Button>
         <nav className={open ? "nav-list is-open" : "nav-list"} aria-label="Navegación principal">
           {nav.map((item) => <button key={item.id} className={page === item.id ? "active" : ""} onClick={() => { setPage(item.id); setOpen(false); }}>{item.label}</button>)}
-          <button onClick={onAdminAccess} aria-label="Administración"><LockKeyhole size={14} /> Admin</button>
+          <button onClick={() => { setOpen(false); onAdminAccess(); }} aria-label="Administración"><LockKeyhole size={14} /> Admin</button>
         </nav>
       </header>
       <div className="breadcrumb"><Orbit size={12} /><span>Munchxine!</span><span>/</span><span>{page === "inicio" ? "Estudio creativo" : nav.find((item) => item.id === page)?.label}</span><Sparkles size={11} /></div>
