@@ -8,3 +8,8 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+# Project decisions
+
+- Keep shimeji frames and editable profile media in the existing browser-local site settings; this preserves the current editing workflow without implying files are shared across visitors.
+- Use multiple individual image uploads instead of executable JAR or ZIP packages for shimeji animations; browsers cannot safely execute desktop shimeji programs and explicit ordered frames are easier to manage.

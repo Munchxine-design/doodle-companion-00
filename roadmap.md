@@ -10,3 +10,9 @@
 - [x] Reemplazar My universe con un editor por capas para texto, imágenes/GIF y dibujo.
 - [x] Añadir recorte, bloqueo, visibilidad, orden, pincel, borrador, deshacer y rehacer.
 - [x] Verificar persistencia y vista pública en escritorio y móvil.
+
+## Panel y perfil
+- [ ] Permitir varios fotogramas ordenables por animación del shimeji.
+- [ ] Permitir cambiar la foto de perfil desde Administración > Perfil.
+- [ ] Recuperar la tarjeta inferior de perfil y estado en todas las páginas.
+- [ ] Verificar los tres cambios en escritorio y móvil.
