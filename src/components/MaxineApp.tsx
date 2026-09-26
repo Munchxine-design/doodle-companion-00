@@ -464,7 +464,7 @@ function TabletExperience({ setPage }: { setPage: (page: Page) => void }) {
 }
 
 function Home({ setPage }: { setPage: (page: Page) => void }) {
-  const [profile, setProfile] = useState<SiteProfile>(getStoredProfile);
+  const profile = getStoredProfile();
   const images = getStoredImagesConfig();
   return <><TabletExperience setPage={setPage} /><section className="intro-band"><Window title="Munchxine.txt"><div className="intro-copy"><img src={images.homeIntro} alt="Avatar de Maxine" /><div><p className="eyebrow">WELCOME_NOTE.LOG</p><h2>¡Haii! Mi nombre es {profile.name}.</h2><p>Soy un artista digital enfocado en el arte 2D, tando ilustracion como modelos Vtuber/Pngtuber. </p></div></div></Window></section><ProfileBand /></>;
 }
@@ -931,7 +931,7 @@ function Contact() {
 // --- ADMIN PANEL CON TODO LO VIEJO Y LO NUEVO ---
 function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () => void }) {
   const [activeTab, setActiveTab] = useState<"envios" | "comentarios" | "chat" | "organizador" | "perfil" | "imagenes" | "emojis" | "musica" | "shimeji">("chat");
-  const profile = getStoredProfile();
+  const [profile, setProfile] = useState<SiteProfile>(getStoredProfile);
 
   // Estados originales
   const [submissions, setSubmissions] = useState<Submission[]>([]);
