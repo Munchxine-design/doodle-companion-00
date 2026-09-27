@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent, type ChangeEvent } from "react";
-import { Brush, Check, ChevronDown, Coffee, CornerDownRight, Eraser, Eye, Folder, Image as ImageIcon, LockKeyhole, Menu, MessageCircle, Minus, Orbit, Paintbrush, Play, RotateCcw, Send, Smile, Sparkles, Square, Trash2, X, Music, LogOut, Terminal, Type, MousePointer2, Plus, Calendar, Kanban, Inbox } from "lucide-react";
+import { Brush, Check, ChevronDown, Coffee, CornerDownRight, Eraser, Eye, EyeOff, Folder, Image as ImageIcon, LockKeyhole, Menu, MessageCircle, Minus, Orbit, Paintbrush, Play, RotateCcw, Send, Smile, Sparkles, Square, Trash2, X, Music, LogOut, Terminal, Type, MousePointer2, Plus, Calendar, Kanban, Inbox } from "lucide-react";
 import avatarAsset from "@/assets/maxine-avatar.png.asset.json";
 import orcaAsset from "@/assets/orca-credential.jpg.asset.json";
 import { Button } from "@/components/ui/button";
@@ -68,6 +68,7 @@ const getStoredShimejiConfig = (): ShimejiConfig => {
 // --- COMPONENTE SHIMEJI ADAPTADO PARA PC Y MÓVILES TÁCTILES ---
 function VirtualShimeji() {
   const [config, setConfig] = useState(getStoredShimejiConfig);
+  const [hidden, setHidden] = useState(false);
   const [pos, setPos] = useState({ x: 120, y: window.innerHeight - 90 });
   const [state, setState] = useState<ShimejiState>("walk");
   const [direction, setDirection] = useState<1 | -1>(1);
@@ -168,6 +169,11 @@ function VirtualShimeji() {
   const activeImage = currentFrames[frameIndex % currentFrames.length] || avatarAsset.url;
 
   return (
+    <>
+    <Button variant="ghost" size="icon" className="shimeji-visibility" onClick={() => setHidden(value => !value)} aria-label={hidden ? "Mostrar shimeji" : "Ocultar shimeji"} title={hidden ? "Mostrar shimeji" : "Ocultar shimeji"}>
+      {hidden ? <Eye size={18} /> : <EyeOff size={18} />}
+    </Button>
+    {!hidden && (
     <div onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onClick={triggerJump}
       style={{
         position: 'fixed', left: `${pos.x}px`, top: `${pos.y}px`, zIndex: 10005, width: '64px', height: '64px',
@@ -176,6 +182,8 @@ function VirtualShimeji() {
       }} title="¡Shimeji interactivo!">
       <img src={activeImage} alt="Shimeji" style={{ width: '100%', height: '100%', objectFit: 'contain', filter: 'drop-shadow(2px 4px 6px rgba(0,0,0,0.5))', pointerEvents: 'none' }} />
     </div>
+    )}
+    </>
   );
 }
 
@@ -222,14 +230,21 @@ function SecretCodesWidget({ onTriggerEffect }: { onTriggerEffect: (effectName: 
 
 function SpotifyWidget() {
   const spotifyUrl = getStoredSpotify();
-  const [minimized, setMinimized] = useState(false);
+  const [compact, setCompact] = useState(() => window.matchMedia("(max-width: 900px)").matches);
+  const [minimized, setMinimized] = useState(() => window.matchMedia("(max-width: 900px)").matches);
   const [pos, setPos] = useState({ x: window.innerWidth - 400, y: window.innerHeight - 240 });
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef({ x: 0, y: 0 });
   const isDraggingRef = useRef(isDragging);
   isDraggingRef.current = isDragging;
 
-  if (!spotifyUrl) return null;
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 900px)");
+    const onChange = () => { setCompact(media.matches); setMinimized(media.matches); };
+    media.addEventListener("change", onChange);
+    return () => media.removeEventListener("change", onChange);
+  }, []);
+
   let embedUrl = spotifyUrl;
   if (spotifyUrl.includes("spotify.com") && !spotifyUrl.includes("/embed/")) {
     embedUrl = spotifyUrl.replace("spotify.com/", "spotify.com/embed/");
@@ -245,15 +260,17 @@ function SpotifyWidget() {
     return () => { window.removeEventListener("mousemove", handleMove); window.removeEventListener("mouseup", handleUp); };
   }, []);
 
-  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => { e.preventDefault(); setIsDragging(true); dragRef.current = { x: e.clientX - pos.x, y: e.clientY - pos.y }; };
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => { if (compact) return; e.preventDefault(); setIsDragging(true); dragRef.current = { x: e.clientX - pos.x, y: e.clientY - pos.y }; };
+
+  if (!spotifyUrl) return null;
 
   return (
-    <div style={{ position: 'fixed', left: `${pos.x}px`, top: `${pos.y}px`, zIndex: 9997, width: '380px', background: '#ece9d8', border: '2px solid #0055ea', borderRadius: '5px 5px 0 0', boxShadow: '2px 2px 10px rgba(0,0,0,0.5)', fontFamily: 'Tahoma, sans-serif' }}>
-      <div onMouseDown={handleMouseDown} style={{ background: 'linear-gradient(to right, #0055ea, #1690ff)', color: 'white', padding: '6px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', fontWeight: 'bold', cursor: 'grab', userSelect: 'none' }}>
-        <span>🎵 Spotify - WinXP Player (Movible)</span>
-        <button onClick={() => setMinimized(!minimized)} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 'bold' }}>{minimized ? "□" : "_"}</button>
+    <div className={`spotify-widget ${compact ? "is-compact" : ""} ${minimized ? "is-minimized" : ""}`} style={compact ? undefined : { left: `${pos.x}px`, top: `${pos.y}px` }}>
+      <div className="spotify-widget-bar" onMouseDown={handleMouseDown}>
+        <span>🎵 Spotify</span>
+        <Button variant="ghost" size="icon" onClick={() => setMinimized(!minimized)} aria-label={minimized ? "Mostrar Spotify" : "Ocultar Spotify"} title={minimized ? "Mostrar Spotify" : "Ocultar Spotify"}>{minimized ? <Music size={16} /> : <Minus size={16} />}</Button>
       </div>
-      {!minimized && (<div style={{ background: '#000', lineHeight: 0 }}><iframe src={embedUrl} width="100%" height="152" frameBorder="0" allow="encrypted-media" title="Spotify Player" style={{ borderRadius: '0' }} /></div>)}
+      {!minimized && (<div className="spotify-embed"><iframe src={embedUrl} width="100%" height="152" frameBorder="0" allow="encrypted-media" title="Spotify Player" /></div>)}
     </div>
   );
 }

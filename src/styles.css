@@ -157,8 +157,8 @@ button { color: inherit; }
 
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; } .hero-window { transform: none !important; } }
 
-* {
-  cursor: none !important;
+@media (hover: hover) and (pointer: fine) {
+  * { cursor: none !important; }
 }
 
 /* 1. FONDO CON OVERLAY OSCURO */
