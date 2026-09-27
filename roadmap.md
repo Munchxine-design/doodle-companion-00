@@ -16,3 +16,9 @@
 - [x] Permitir cambiar la foto de perfil desde Administración > Perfil.
 - [x] Recuperar la tarjeta inferior de perfil y estado en todas las páginas.
 - [x] Verificar los tres cambios en escritorio y móvil.
+
+## Vista móvil y iPad
+- [x] Mostrar el cursor personalizado solo con ratón o lápiz digital, nunca al tocar con el dedo.
+- [x] Colocar la tableta animada bajo el texto de portada en teléfono y tableta.
+- [x] Hacer que Spotify y shimeji puedan ocultarse sin estorbar la navegación.
+- [x] Verificar teléfono, iPad y escritorio.
