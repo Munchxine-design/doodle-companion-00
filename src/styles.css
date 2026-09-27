@@ -172,6 +172,7 @@ button { color: inherit; }
 @media (hover: hover) and (pointer: fine) {
   * { cursor: none !important; }
 }
+body:has(.custom-cursor) * { cursor: none !important; }
 
 /* 1. FONDO CON OVERLAY OSCURO */
 .app-shell {

@@ -31,6 +31,7 @@ export function CustomCursor() {
 
   return (
     <img
+      className="custom-cursor"
       src="/cursor-medusa.png"
       alt=""
       aria-hidden="true"
