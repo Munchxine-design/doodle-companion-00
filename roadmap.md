@@ -18,7 +18,7 @@
 - [x] Verificar los tres cambios en escritorio y móvil.
 
 ## Vista móvil y iPad
-- [ ] Mostrar el cursor personalizado solo con ratón o lápiz digital, nunca al tocar con el dedo.
-- [ ] Colocar la tableta animada bajo el texto de portada en teléfono y tableta.
-- [ ] Hacer que Spotify y shimeji puedan ocultarse sin estorbar la navegación.
-- [ ] Verificar teléfono, iPad y escritorio.
+- [x] Mostrar el cursor personalizado solo con ratón o lápiz digital, nunca al tocar con el dedo.
+- [x] Colocar la tableta animada bajo el texto de portada en teléfono y tableta.
+- [x] Hacer que Spotify y shimeji puedan ocultarse sin estorbar la navegación.
+- [x] Verificar teléfono, iPad y escritorio.
