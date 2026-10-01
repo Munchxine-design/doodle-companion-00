@@ -54,6 +54,13 @@ const getStoredImagesConfig = () => JSON.parse(localStorage.getItem("site_images
 const getStoredEmojis = () => JSON.parse(localStorage.getItem("site_custom_emojis") || JSON.stringify([{ name: "corazon", url: avatarAsset.url }, { name: "estrella", url: avatarAsset.url }]));
 const getStoredPortfolio = () => JSON.parse(localStorage.getItem("site_portfolio") || JSON.stringify([{ id: "1", title: "MEGAMAN!!!", category: "Drawings", image_path: avatarAsset.url }]));
 const getStoredSpotify = () => localStorage.getItem("site_spotify_url") || "";
+type SocialFlipConfig = { image: string; message: string };
+const getStoredSocialFlip = (): SocialFlipConfig => {
+  try {
+    const saved = JSON.parse(localStorage.getItem("site_social_flip") || "null") as Partial<SocialFlipConfig> | null;
+    return { image: saved?.image || avatarAsset.url, message: saved?.message || "¡Haiii! Gracias por visitar mi rincón ♡" };
+  } catch { return { image: avatarAsset.url, message: "¡Haiii! Gracias por visitar mi rincón ♡" }; }
+};
 type ShimejiState = "walk" | "climb" | "fall" | "drag" | "idle" | "click1" | "click2";
 const shimejiStates: ShimejiState[] = ["walk", "climb", "fall", "drag", "idle", "click1", "click2"];
 const shimejiLabels: Record<ShimejiState, string> = { walk: "Caminar", climb: "Trepar", fall: "Caer", drag: "Arrastrar", idle: "Descansar", click1: "Salto 1", click2: "Salto 2" };
@@ -419,6 +426,28 @@ function StrawpageCanvas({ adminMode }: { adminMode: boolean }) {
 }
 
 // --- PAGINAS ORIGINALES ---
+function TabletVisual({ stage, progress, penX, penY, image }: { stage: number; progress: number; penX: number; penY: number; image: string }) {
+  return (
+    <div className="tablet-column">
+      <div className="tablet-shell">
+        <div className="tablet-keys"><i /><b /><b /><b /><i /></div>
+        <div className="tablet-screen">
+          <div className="screen-grid" />
+          <div className={`stage-art sketch ${stage === 0 ? "visible" : ""}`}><div className="blueprint-avatar sketch"><span className="head" /><span className="body" /><span className="arm left" /><span className="arm right" /><span className="leg left" /><span className="leg right" /></div></div>
+          <div className={`stage-art lineart ${stage === 1 ? "visible" : ""}`}><div className="blueprint-avatar line"><span className="head" /><span className="body" /><span className="arm left" /><span className="arm right" /><span className="leg left" /><span className="leg right" /></div></div>
+          <div className={`stage-art final ${stage === 2 ? "visible" : ""}`}><img src={image} alt="Ilustración final de Maxine" /></div>
+          <div className="screen-readout"><span>ACTIVE_LAYER: 0{stage + 1}_{["SKETCH", "LINEART", "RENDER"][stage]}</span><span>PRESSURE: {Math.round(52 + progress * 35)}%</span><span>STYLUS: CONNECTED</span></div>
+          <div className="stylus" style={{ left: `${penX}%`, top: `${penY}%` }}><span /></div>
+        </div>
+      </div>
+      <div className="stage-panel">
+        <div><span className="stage-index">0{stage + 1} / 03</span><h3>{stages[stage]?.title}</h3><p>{stages[stage]?.copy}</p></div>
+        <div className="progress-track"><span style={{ width: `${Math.max(progress * 100, 5)}%` }} /></div>
+      </div>
+    </div>
+  );
+}
+
 function TabletExperience({ setPage }: { setPage: (page: Page) => void }) {
   const sectionRef = useRef<HTMLDivElement>(null);
   const [progress, setProgress] = useState(0);
@@ -454,25 +483,10 @@ function TabletExperience({ setPage }: { setPage: (page: Page) => void }) {
               <p className="hero-description">2D illustration and models for VRChat.<br />Welcome to my creative world.</p>
               <Button variant="signal" onClick={() => setPage("portafolio")}>See my work <Send /></Button>
             </div>
+            <div className="tablet-mobile"><TabletVisual stage={stage} progress={progress} penX={penX} penY={penY} image={images.homeProfile} /></div>
             <div className="status-line"><span>STATUS: READY</span><span>STATION_04</span></div>
           </Window>
-          <div className="tablet-column">
-            <div className="tablet-shell">
-              <div className="tablet-keys"><i /><b /><b /><b /><i /></div>
-              <div className="tablet-screen">
-                <div className="screen-grid" />
-                <div className={`stage-art sketch ${stage === 0 ? "visible" : ""}`}><div className={`blueprint-avatar sketch`}><span className="head" /><span className="body" /><span className="arm left" /><span className="arm right" /><span className="leg left" /><span className="leg right" /></div></div>
-                <div className={`stage-art lineart ${stage === 1 ? "visible" : ""}`}><div className={`blueprint-avatar line`}><span className="head" /><span className="body" /><span className="arm left" /><span className="arm right" /><span className="leg left" /><span className="leg right" /></div></div>
-                <div className={`stage-art final ${stage === 2 ? "visible" : ""}`}><img src={images.homeProfile} alt="Ilustración final de Maxine" /></div>
-                <div className="screen-readout"><span>ACTIVE_LAYER: 0{stage + 1}_{["SKETCH", "LINEART", "RENDER"][stage]}</span><span>PRESSURE: {Math.round(52 + progress * 35)}%</span><span>STYLUS: CONNECTED</span></div>
-                <div className="stylus" style={{ left: `${penX}%`, top: `${penY}%` }}><span /></div>
-              </div>
-            </div>
-            <div className="stage-panel">
-              <div><span className="stage-index">0{stage + 1} / 03</span><h3>{stages[stage]?.title}</h3><p>{stages[stage]?.copy}</p></div>
-              <div className="progress-track"><span style={{ width: `${Math.max(progress * 100, 5)}%` }} /></div>
-            </div>
-          </div>
+          <div className="tablet-desktop"><TabletVisual stage={stage} progress={progress} penX={penX} penY={penY} image={images.homeProfile} /></div>
         </div>
         <div className="scroll-cue"><span>BAJA PARA VER CÓMO EVOLUCIONA EL ARTE</span><ChevronDown /></div>
       </div>
@@ -947,7 +961,7 @@ function Contact() {
 
 // --- ADMIN PANEL CON TODO LO VIEJO Y LO NUEVO ---
 function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () => void }) {
-  const [activeTab, setActiveTab] = useState<"envios" | "comentarios" | "chat" | "organizador" | "perfil" | "imagenes" | "emojis" | "musica" | "shimeji">("chat");
+  const [activeTab, setActiveTab] = useState<"envios" | "comentarios" | "chat" | "organizador" | "perfil" | "imagenes" | "emojis" | "musica" | "shimeji" | "social">("chat");
   const [profile, setProfile] = useState<SiteProfile>(getStoredProfile);
 
   // Estados originales
@@ -962,6 +976,7 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
   const [newEmojiName, setNewEmojiName] = useState("");
   const [newEmojiImg, setNewEmojiImg] = useState("");
   const [spotifyUrl, setSpotifyUrl] = useState(getStoredSpotify());
+  const [socialFlip, setSocialFlip] = useState<SocialFlipConfig>(getStoredSocialFlip);
   const [shimejiConfig, setShimejiConfig] = useState(getStoredShimejiConfig());
   const [mediaError, setMediaError] = useState("");
 
@@ -1077,6 +1092,7 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
         <Button variant={activeTab === "imagenes" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("imagenes")}>Galería e Imágenes</Button>
         <Button variant={activeTab === "emojis" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("emojis")}>Emojis</Button>
         <Button variant={activeTab === "musica" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("musica")}>Música</Button>
+        <Button variant={activeTab === "social" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("social")}>Social</Button>
         <Button variant={activeTab === "shimeji" ? "signal" : "ghost"} size="sm" onClick={() => setActiveTab("shimeji")}>Shimeji</Button>
       </div>
 
@@ -1289,6 +1305,16 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
         </div>
       )}
 
+      {activeTab === "social" && (
+        <div className="admin-media-section">
+          <h3>Imagen interactiva de Social</h3>
+          <div className="admin-social-editor">
+            <div className="admin-profile-photo"><img src={socialFlip.image} alt="Vista previa de la imagen social" /><label className="upload-button"><ImageIcon size={14} /> Cambiar imagen<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => setSocialFlip(current => ({ ...current, image: String(reader.result ?? current.image) })); reader.readAsDataURL(file); }} /></label></div>
+            <div className="admin-profile-name"><label htmlFor="social-message">Texto del globo</label><Textarea id="social-message" value={socialFlip.message} onChange={(e) => setSocialFlip(current => ({ ...current, message: e.target.value }))} maxLength={240} /><Button variant="signal" onClick={() => { localStorage.setItem("site_social_flip", JSON.stringify(socialFlip)); window.dispatchEvent(new Event("storage")); alert("¡Imagen social guardada!"); }}>Guardar Social</Button></div>
+          </div>
+        </div>
+      )}
+
       {activeTab === "shimeji" && (
         <div className="admin-media-section">
           <h3>Fotogramas del Shimeji</h3>
@@ -1323,6 +1349,8 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
 function ProfileBand() {
   const images = getStoredImagesConfig();
   const profile = getStoredProfile();
+  const socialFlip = getStoredSocialFlip();
+  const [speechOpen, setSpeechOpen] = useState(false);
   return (
     <section className="profile-band">
       <Window title="Munchxine_profile.exe">
@@ -1342,6 +1370,12 @@ function ProfileBand() {
           <h2>Maxine Online!</h2>
           <p>@Munchxine_</p>
           <div className="online-art"><img src={images.homeDirects} alt="Arte de Maxine" /><span>MUNCHINE ONLINE!</span></div>
+          <div className="social-flip-scene">
+            {speechOpen && <div className="social-speech" role="status">{socialFlip.message}</div>}
+            <Button variant="ghost" className="social-flip-button" onClick={() => setSpeechOpen(value => !value)} aria-label={speechOpen ? "Ocultar mensaje de Maxine" : "Mostrar mensaje de Maxine"} aria-expanded={speechOpen}>
+              <img src={socialFlip.image} alt="Personaje social de Maxine" />
+            </Button>
+          </div>
         </div>
       </Window>
     </section>

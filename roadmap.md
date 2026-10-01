@@ -22,3 +22,8 @@
 - [x] Colocar la tableta animada bajo el texto de portada en teléfono y tableta.
 - [x] Hacer que Spotify y shimeji puedan ocultarse sin estorbar la navegación.
 - [x] Verificar teléfono, iPad y escritorio.
+
+## Portada y Social interactivo
+- [x] Unir la tableta animada con FILE_VIEWER en teléfono y iPad.
+- [x] Añadir imagen social giratoria con globo editable desde administración.
+- [x] Verificar la interacción y el diseño en teléfono, iPad y escritorio.
