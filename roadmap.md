@@ -24,6 +24,6 @@
 - [x] Verificar teléfono, iPad y escritorio.
 
 ## Portada y Social interactivo
-- [ ] Unir la tableta animada con FILE_VIEWER en teléfono y iPad.
-- [ ] Añadir imagen social giratoria con globo editable desde administración.
-- [ ] Verificar la interacción y el diseño en teléfono, iPad y escritorio.
+- [x] Unir la tableta animada con FILE_VIEWER en teléfono y iPad.
+- [x] Añadir imagen social giratoria con globo editable desde administración.
+- [x] Verificar la interacción y el diseño en teléfono, iPad y escritorio.
