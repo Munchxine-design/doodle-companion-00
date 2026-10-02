@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type PointerEvent, type ChangeEvent } from
 import { Brush, Check, ChevronDown, Coffee, CornerDownRight, Eraser, Eye, EyeOff, Folder, Image as ImageIcon, LockKeyhole, Menu, MessageCircle, Minus, Orbit, Paintbrush, Play, RotateCcw, Send, Smile, Sparkles, Square, Trash2, X, Music, LogOut, Terminal, Type, MousePointer2, Plus, Calendar, Kanban, Inbox } from "lucide-react";
 import avatarAsset from "@/assets/maxine-avatar.png.asset.json";
 import orcaAsset from "@/assets/orca-credential.jpg.asset.json";
+import spinningAsset from "@/assets/teri-spinning.gif.asset.json";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -58,8 +59,8 @@ type SocialFlipConfig = { image: string; message: string };
 const getStoredSocialFlip = (): SocialFlipConfig => {
   try {
     const saved = JSON.parse(localStorage.getItem("site_social_flip") || "null") as Partial<SocialFlipConfig> | null;
-    return { image: saved?.image || avatarAsset.url, message: saved?.message || "¡Haiii! Gracias por visitar mi rincón ♡" };
-  } catch { return { image: avatarAsset.url, message: "¡Haiii! Gracias por visitar mi rincón ♡" }; }
+    return { image: saved?.image && saved.image !== avatarAsset.url ? saved.image : spinningAsset.url, message: saved?.message || "¡Haiii! Gracias por visitar mi rincón ♡" };
+  } catch { return { image: spinningAsset.url, message: "¡Haiii! Gracias por visitar mi rincón ♡" }; }
 };
 type ShimejiState = "walk" | "climb" | "fall" | "drag" | "idle" | "click1" | "click2";
 const shimejiStates: ShimejiState[] = ["walk", "climb", "fall", "drag", "idle", "click1", "click2"];
@@ -1347,7 +1348,6 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
 }
 
 function ProfileBand() {
-  const images = getStoredImagesConfig();
   const profile = getStoredProfile();
   const socialFlip = getStoredSocialFlip();
   const [speechOpen, setSpeechOpen] = useState(false);
@@ -1369,12 +1369,12 @@ function ProfileBand() {
           <p className="eyebrow">CURRENT_STATUS.LOG</p>
           <h2>Maxine Online!</h2>
           <p>@Munchxine_</p>
-          <div className="online-art"><img src={images.homeDirects} alt="Arte de Maxine" /><span>MUNCHINE ONLINE!</span></div>
-          <div className="social-flip-scene">
+          <div className="online-art">
             {speechOpen && <div className="social-speech" role="status">{socialFlip.message}</div>}
             <Button variant="ghost" className="social-flip-button" onClick={() => setSpeechOpen(value => !value)} aria-label={speechOpen ? "Ocultar mensaje de Maxine" : "Mostrar mensaje de Maxine"} aria-expanded={speechOpen}>
               <img src={socialFlip.image} alt="Personaje social de Maxine" />
             </Button>
+            <span>MUNCHINE ONLINE!</span>
           </div>
         </div>
       </Window>
