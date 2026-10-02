@@ -1308,9 +1308,9 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
 
       {activeTab === "social" && (
         <div className="admin-media-section">
-          <h3>Imagen interactiva de Social</h3>
+          <h3>Imagen giratoria de Maxine Online</h3>
           <div className="admin-social-editor">
-            <div className="admin-profile-photo"><img src={socialFlip.image} alt="Vista previa de la imagen social" /><label className="upload-button"><ImageIcon size={14} /> Cambiar imagen<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => setSocialFlip(current => ({ ...current, image: String(reader.result ?? current.image) })); reader.readAsDataURL(file); }} /></label></div>
+            <div className="admin-profile-photo"><img src={socialFlip.image} alt="Vista previa de la imagen giratoria" /><label className="upload-button"><ImageIcon size={14} /> Elegir imagen o GIF<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => setSocialFlip(current => ({ ...current, image: String(reader.result ?? current.image) })); reader.readAsDataURL(file); }} /></label></div>
             <div className="admin-profile-name"><label htmlFor="social-message">Texto del globo</label><Textarea id="social-message" value={socialFlip.message} onChange={(e) => setSocialFlip(current => ({ ...current, message: e.target.value }))} maxLength={240} /><Button variant="signal" onClick={() => { localStorage.setItem("site_social_flip", JSON.stringify(socialFlip)); window.dispatchEvent(new Event("storage")); alert("¡Imagen social guardada!"); }}>Guardar Social</Button></div>
           </div>
         </div>
@@ -1349,6 +1349,7 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
 
 function ProfileBand() {
   const profile = getStoredProfile();
+  const images = getStoredImagesConfig();
   const socialFlip = getStoredSocialFlip();
   const [speechOpen, setSpeechOpen] = useState(false);
   return (
@@ -1370,6 +1371,7 @@ function ProfileBand() {
           <h2>Maxine Online!</h2>
           <p>@Munchxine_</p>
           <div className="online-art">
+            <img className="online-art-background" src={images.homeDirects} alt="" aria-hidden="true" />
             {speechOpen && <div className="social-speech" role="status">{socialFlip.message}</div>}
             <Button variant="ghost" className="social-flip-button" onClick={() => setSpeechOpen(value => !value)} aria-label={speechOpen ? "Ocultar mensaje de Maxine" : "Mostrar mensaje de Maxine"} aria-expanded={speechOpen}>
               <img src={socialFlip.image} alt="Personaje social de Maxine" />
