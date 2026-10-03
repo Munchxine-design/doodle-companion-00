@@ -8,6 +8,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { UniverseEditor } from "@/components/site/UniverseEditor";
+import { supabase } from "@/integrations/supabase/client";
+import { saveSiteSetting } from "@/lib/site-config.functions";
 
 type Page = "inicio" | "portafolio" | "comunidad" | "sobre-mi" | "contacto";
 
@@ -38,6 +40,37 @@ const stages = [
 
 const ADMIN_PASSWORD = "maxine123";
 
+// Ajustes compartidos: se guardan en la base de datos para que cualquier
+// visitante vea las mismas imágenes y textos, y se copian en localStorage
+// como caché local de carga rápida.
+const SHARED_SITE_KEYS = [
+  "site_profile",
+  "site_images_config",
+  "site_custom_emojis",
+  "site_portfolio",
+  "site_spotify_url",
+  "site_social_flip",
+  "site_shimeji_states",
+] as const;
+
+function saveSharedSiteSetting(key: string, value: unknown) {
+  localStorage.setItem(key, JSON.stringify(value));
+  window.dispatchEvent(new Event("storage"));
+  void saveSiteSetting({ data: { key, value, password: ADMIN_PASSWORD } }).catch((err) => {
+    console.error("No se pudo guardar el ajuste en la nube", err);
+  });
+}
+
+async function syncSharedSiteSettings() {
+  const { data, error } = await supabase.from("site_settings").select("key,value").in("key", [...SHARED_SITE_KEYS]);
+  if (error || !data?.length) return;
+  for (const row of data) {
+    if (row.value == null) continue;
+    try { localStorage.setItem(row.key, JSON.stringify(row.value)); } catch { /* sin espacio local */ }
+  }
+  window.dispatchEvent(new Event("storage"));
+}
+
 const colorPresets = [
   { name: "Azul", value: "#69a2ff" }, { name: "Rosa", value: "#ff6b9d" }, { name: "Verde", value: "#4ade80" },
   { name: "Naranja", value: "#fb923c" }, { name: "Amarillo", value: "#facc15" }, { name: "Morado", value: "#a78bfa" },
@@ -54,7 +87,11 @@ const getStoredProfile = (): SiteProfile => {
 const getStoredImagesConfig = () => JSON.parse(localStorage.getItem("site_images_config") || JSON.stringify({ homeProfile: avatarAsset.url, homeDirects: avatarAsset.url, homeIntro: avatarAsset.url, aboutMain: avatarAsset.url, credential: orcaAsset.url }));
 const getStoredEmojis = () => JSON.parse(localStorage.getItem("site_custom_emojis") || JSON.stringify([{ name: "corazon", url: avatarAsset.url }, { name: "estrella", url: avatarAsset.url }]));
 const getStoredPortfolio = () => JSON.parse(localStorage.getItem("site_portfolio") || JSON.stringify([{ id: "1", title: "MEGAMAN!!!", category: "Drawings", image_path: avatarAsset.url }]));
-const getStoredSpotify = () => localStorage.getItem("site_spotify_url") || "";
+const getStoredSpotify = () => {
+  const raw = localStorage.getItem("site_spotify_url") || "";
+  if (!raw) return "";
+  try { const parsed = JSON.parse(raw) as unknown; return typeof parsed === "string" ? parsed : raw; } catch { return raw; }
+};
 type SocialFlipConfig = { image: string; message: string };
 const getStoredSocialFlip = (): SocialFlipConfig => {
   try {
