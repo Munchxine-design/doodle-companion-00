@@ -1020,10 +1020,9 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
 
   const saveShimeji = (updated: ShimejiConfig) => {
     try {
-      localStorage.setItem("site_shimeji_states", JSON.stringify(updated));
       setShimejiConfig(updated);
       setMediaError("");
-      window.dispatchEvent(new Event("storage"));
+      saveSharedSiteSetting("site_shimeji_states", updated);
     } catch { setMediaError("No queda espacio en este navegador. Prueba con imágenes más pequeñas."); }
   };
 
@@ -1066,18 +1065,18 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => { if (ev.target?.result) { const updated = { ...imagesConfig, [key]: ev.target.result as string }; setImagesConfig(updated); localStorage.setItem("site_images_config", JSON.stringify(updated)); } };
+    reader.onload = (ev) => { if (ev.target?.result) { const updated = { ...imagesConfig, [key]: ev.target.result as string }; setImagesConfig(updated); saveSharedSiteSetting("site_images_config", updated); } };
     reader.readAsDataURL(file);
   };
   const addEmoji = () => {
     if (!newEmojiName.trim() || !newEmojiImg) return;
     const updated = [...emojis, { name: newEmojiName.trim().toLowerCase(), url: newEmojiImg }];
-    setEmojis(updated); localStorage.setItem("site_custom_emojis", JSON.stringify(updated)); setNewEmojiName(""); setNewEmojiImg("");
+    setEmojis(updated); saveSharedSiteSetting("site_custom_emojis", updated); setNewEmojiName(""); setNewEmojiImg("");
   };
   const addPortfolio = () => {
     if (!newArtTitle.trim() || !newArtImage) return;
     const item: PortfolioItem = { id: Date.now().toString(), title: newArtTitle.trim(), category: newArtCategory, image_path: newArtImage };
-    const updated = [item, ...portfolioItems]; setPortfolioItems(updated); localStorage.setItem("site_portfolio", JSON.stringify(updated)); setNewArtTitle(""); setNewArtImage("");
+    const updated = [item, ...portfolioItems]; setPortfolioItems(updated); saveSharedSiteSetting("site_portfolio", updated); setNewArtTitle(""); setNewArtImage("");
   };
 
   // Funciones Chat
