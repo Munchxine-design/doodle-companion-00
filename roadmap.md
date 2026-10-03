@@ -27,3 +27,7 @@
 - [x] Unir la tableta animada con FILE_VIEWER en teléfono y iPad.
 - [x] Añadir imagen social giratoria con globo editable desde administración.
 - [x] Verificar la interacción y el diseño en teléfono, iPad y escritorio.
+
+## Ajustes compartidos
+- [x] Guardar las imágenes y ajustes del panel en la base de datos para que cualquier visitante los vea.
+- [x] Verificar que un visitante nuevo recibe los cambios guardados por el admin.
