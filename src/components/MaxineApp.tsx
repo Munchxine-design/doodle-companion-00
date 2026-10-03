@@ -1265,7 +1265,7 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
               <label htmlFor="admin-profile-name">Nombre de usuario</label>
               <Input id="admin-profile-name" value={profile.name} onChange={(e) => setProfile(current => ({ ...current, name: e.target.value }))} />
               <Button variant="signal" onClick={() => {
-                try { localStorage.setItem("site_profile", JSON.stringify({ ...profile, name: profile.name.trim() || "Maxine" })); setMediaError(""); window.dispatchEvent(new Event("storage")); }
+                try { saveSharedSiteSetting("site_profile", { ...profile, name: profile.name.trim() || "Maxine" }); setMediaError(""); }
                 catch { setMediaError("No queda espacio en este navegador. Prueba con una foto más pequeña."); }
               }}>Guardar perfil</Button>
             </div>
@@ -1304,7 +1304,7 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
               <div key={p.id} style={{ background: 'rgba(10, 25, 47, 0.6)', padding: '8px', borderRadius: '6px', textAlign: 'center' }}>
                 <img src={p.image_path} alt={p.title} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: '4px' }} />
                 <p style={{ fontSize: '12px', margin: '6px 0' }}>{p.title} · {p.category}</p>
-                <Button variant="destructive" size="sm" onClick={() => { const updated = portfolioItems.filter(i => i.id !== p.id); setPortfolioItems(updated); localStorage.setItem("site_portfolio", JSON.stringify(updated)); }}><Trash2 size={12} /></Button>
+                <Button variant="destructive" size="sm" onClick={() => { const updated = portfolioItems.filter(i => i.id !== p.id); setPortfolioItems(updated); saveSharedSiteSetting("site_portfolio", updated); }}><Trash2 size={12} /></Button>
               </div>
             ))}
           </div>
@@ -1327,7 +1327,7 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
               <div key={`${em.name}-${i}`} style={{ textAlign: 'center', background: 'rgba(10, 25, 47, 0.6)', padding: '8px', borderRadius: '6px' }}>
                 <img src={em.url} alt={em.name} style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
                 <p style={{ fontSize: '11px', margin: '4px 0' }}>:{em.name}:</p>
-                <Button variant="destructive" size="sm" onClick={() => { const updated = emojis.filter((_, idx) => idx !== i); setEmojis(updated); localStorage.setItem("site_custom_emojis", JSON.stringify(updated)); }}><Trash2 size={12} /></Button>
+                <Button variant="destructive" size="sm" onClick={() => { const updated = emojis.filter((_, idx) => idx !== i); setEmojis(updated); saveSharedSiteSetting("site_custom_emojis", updated); }}><Trash2 size={12} /></Button>
               </div>
             ))}
           </div>
@@ -1338,7 +1338,7 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
         <div style={{ padding: '20px', background: 'rgba(15, 32, 59, 0.8)', borderRadius: '8px' }}>
           <h3 style={{ marginBottom: '15px' }}>Música (enlace de Spotify)</h3>
           <Input placeholder="https://open.spotify.com/..." value={spotifyUrl} onChange={(e) => setSpotifyUrl(e.target.value)} style={{ marginBottom: '10px' }} />
-          <Button variant="signal" onClick={() => { localStorage.setItem("site_spotify_url", spotifyUrl.trim()); alert("¡Música guardada!"); }}>Guardar</Button>
+          <Button variant="signal" onClick={() => { saveSharedSiteSetting("site_spotify_url", spotifyUrl.trim()); alert("¡Música guardada!"); }}>Guardar</Button>
         </div>
       )}
 
@@ -1347,7 +1347,7 @@ function AdminPanel({ onClose, onLogout }: { onClose: () => void; onLogout: () =
           <h3>Imagen giratoria de Maxine Online</h3>
           <div className="admin-social-editor">
             <div className="admin-profile-photo"><img src={socialFlip.image} alt="Vista previa de la imagen giratoria" /><label className="upload-button"><ImageIcon size={14} /> Elegir imagen o GIF<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => setSocialFlip(current => ({ ...current, image: String(reader.result ?? current.image) })); reader.readAsDataURL(file); }} /></label></div>
-            <div className="admin-profile-name"><label htmlFor="social-message">Texto del globo</label><Textarea id="social-message" value={socialFlip.message} onChange={(e) => setSocialFlip(current => ({ ...current, message: e.target.value }))} maxLength={240} /><Button variant="signal" onClick={() => { localStorage.setItem("site_social_flip", JSON.stringify(socialFlip)); window.dispatchEvent(new Event("storage")); alert("¡Imagen social guardada!"); }}>Guardar Social</Button></div>
+            <div className="admin-profile-name"><label htmlFor="social-message">Texto del globo</label><Textarea id="social-message" value={socialFlip.message} onChange={(e) => setSocialFlip(current => ({ ...current, message: e.target.value }))} maxLength={240} /><Button variant="signal" onClick={() => { saveSharedSiteSetting("site_social_flip", socialFlip); alert("¡Imagen social guardada!"); }}>Guardar Social</Button></div>
           </div>
         </div>
       )}
@@ -1430,6 +1430,7 @@ export function MaxineApp() {
   const [effect, setEffect] = useState<string | null>(null);
 
   useEffect(() => { setMounted(true); setAdminMode(sessionStorage.getItem("maxine_admin") === "1"); }, []);
+  useEffect(() => { void syncSharedSiteSettings(); }, []);
   useEffect(() => { const refresh = () => refreshSite(value => value + 1); window.addEventListener("storage", refresh); return () => window.removeEventListener("storage", refresh); }, []);
   useEffect(() => { window.scrollTo({ top: 0 }); }, [page]);
   useEffect(() => { if (!effect) return; const t = setTimeout(() => setEffect(null), 4000); return () => clearTimeout(t); }, [effect]);
